@@ -3,6 +3,7 @@
 pip/*
 .local/*
 container.claude.json
+container.opencode.json
 
 !.claude/.gitkeep
 !.npm/.gitkeep
