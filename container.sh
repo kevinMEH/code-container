@@ -159,6 +159,7 @@ start_container() {
         -v "$project_path:/root/$project_name" \
         -v "$SCRIPT_DIR/.claude:/root/.claude" \
         -v "$SCRIPT_DIR/container.claude.json:/root/.claude.json" \
+        -v "$SCRIPT_DIR/container.opencode.json:/root/.config/opencode/config.json" \
         -v "$SCRIPT_DIR/.npm:/root/.npm" \
         -v "$SCRIPT_DIR/pip:/root/.cache/pip" \
         -v "$SCRIPT_DIR/.local:/root/.local" \

@@ -51,6 +51,9 @@ RUN ln -sf /usr/bin/python3 /usr/bin/python
 RUN curl -fsSL https://claude.ai/install.sh | bash
 RUN echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 
+# Install Opencode
+RUN npm install -g opencode-ai
+
 # Set working directory to root home
 WORKDIR /root
 
