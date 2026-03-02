@@ -1,5 +1,6 @@
 .claude/*
 .codex/*
+.opencode/*
 .npm/*
 pip/*
 .local/*
@@ -8,6 +9,7 @@ container.opencode.json
 
 !.claude/.gitkeep
 !.codex/.gitkeep
+!.opencode/.gitkeep
 !.npm/.gitkeep
 !pip/.gitkeep
 !.local/.gitkeep

@@ -124,6 +124,7 @@ start_container() {
     mkdir -p "$SCRIPT_DIR/.npm"
     mkdir -p "$SCRIPT_DIR/pip"
     mkdir -p "$SCRIPT_DIR/.local"
+    mkdir -p "$SCRIPT_DIR/.opencode"
     
     # Check if image exists, build if not
     if ! image_exists; then
@@ -161,9 +162,7 @@ start_container() {
         -v "$SCRIPT_DIR/.claude:/root/.claude" \
         -v "$SCRIPT_DIR/container.claude.json:/root/.claude.json" \
         -v "$SCRIPT_DIR/.codex:/root/.codex" \
-        -v "$SCRIPT_DIR/container.codex.json:/root/.codex/config.json" \
-        -v "$SCRIPT_DIR/container.codex.json:/root/.config/codex/config.json" \
-        -v "$SCRIPT_DIR/container.opencode.json:/root/.config/opencode/config.json" \
+        -v "$SCRIPT_DIR/.opencode:/root/.config/opencode" \
         -v "$SCRIPT_DIR/.npm:/root/.npm" \
         -v "$SCRIPT_DIR/pip:/root/.cache/pip" \
         -v "$SCRIPT_DIR/.local:/root/.local" \
