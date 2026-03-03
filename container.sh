@@ -75,7 +75,16 @@ generate_container_name() {
     # Get the project folder name
     local project_name=$(basename "$project_path")
     # Create a hash of the full path for uniqueness
-    local path_hash=$(echo -n "$project_path" | shasum | cut -c1-8)
+    local path_hash
+    if command -v shasum >/dev/null 2>&1; then
+        path_hash=$(echo -n "$project_path" | shasum | cut -c1-8)
+    elif command -v sha1sum >/dev/null 2>&1; then
+        path_hash=$(echo -n "$project_path" | sha1sum | cut -c1-8)
+    else
+        print_error "Neither shasum nor sha1sum is available; cannot generate container hash"
+        exit 1
+    fi
+
     echo "code-${project_name}-${path_hash}"
 }
 
@@ -228,7 +237,16 @@ list_containers() {
 # Function to clean up stopped containers
 clean_containers() {
     print_info "Removing all stopped Code containers..."
-    docker ps -a --filter "name=code-" --quiet | xargs -r docker rm
+    local container_ids
+    container_ids=$(docker ps -a --filter "name=code-" --filter "status=exited" --quiet)
+
+    if [ -z "$container_ids" ]; then
+        print_info "No stopped Code containers to remove"
+        return
+    fi
+
+    docker rm $container_ids
+
     print_success "Cleanup complete"
 }
 
