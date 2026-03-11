@@ -54,6 +54,9 @@ RUN npm install -g opencode-ai
 # Install OpenAI Codex CLI
 RUN npm install -g @openai/codex
 
+# Install Gemini CLI
+RUN npm install -g @google/gemini-cli
+
 # Set working directory to root home
 WORKDIR /root
 
