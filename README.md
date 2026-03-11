@@ -72,30 +72,7 @@ Container state is saved. Next invocation resumes where you left off. AI convers
 
 Destructive actions are localized inside containers. You can let your harness run with full permissions.
 
-`.opencode/opencode.json`
-```json
-{
-  "permission": "allow"
-}
-```
-
-`.codex/config.toml`
-```toml
-approval_policy = "never"
-sandbox_mode = "danger-full-access"
-```
-
-`.claude/settings.json`
-```json
-{
-  "permissions": {
-    "allow": [
-      "*",
-      "Bash"
-    ]
-  }
-}
-```
+To configure your harness to run without permissions, see [Permissions.md](Permissions.md) for instructions.
 
 ## Common Commands
 
