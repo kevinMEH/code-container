@@ -44,14 +44,14 @@ Add the following properties:
 Gemini uses a "policy engine" to determine tool usage approvals. To bypass permissions, perform the following:
 
 1. Create the policies directory if it doesn't already exist:
-   ```bash
-   mkdir -p .gemini/policies
-   ```
+    ```bash
+    mkdir -p .gemini/policies
+    ```
 
 2. Create a rule file at `.gemini/policies/rules.toml` with the following contents:
-   ```toml
-   [[rule]]
-   toolName = "*"
-   decision = "allow"
-   priority = 777
-   ```
+    ```toml
+    [[rule]]
+    toolName = ["run_shell_command", "write_file", "replace"]
+    decision = "allow"
+    priority = 777
+    ```
