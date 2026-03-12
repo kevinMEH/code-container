@@ -22,12 +22,12 @@ IMAGE_NAME="code"
 IMAGE_TAG="latest"
 
 # Container launch command; modify to add additional mounts
-run_new_container() {
+start_new_container() {
     local container_name="$1"
     local project_name="$2"
     local project_path="$3"
 
-    docker run -it \
+    docker run -d \
         --name "$container_name" \
         -e TERM=xterm-256color \
         -w "/root/$project_name" \
@@ -42,7 +42,8 @@ run_new_container() {
         -v "$SCRIPT_DIR/.local:/root/.local" \
         -v "$HOME/.gitconfig:/root/.gitconfig:ro" \
         -v "$HOME/.ssh:/root/.ssh:ro" \
-        "${IMAGE_NAME}:${IMAGE_TAG}"
+        "${IMAGE_NAME}:${IMAGE_TAG}" \
+        sleep infinity
 }
 
 # Function to print colored output
@@ -139,6 +140,27 @@ container_running() {
     [ "$(docker container inspect -f '{{.State.Running}}' "$container_name" 2>/dev/null)" == "true" ]
 }
 
+# Stop the container only if no other terminal sessions for the project are active.
+stop_container_if_last_session() {
+    local container_name="$1"
+    local project_name="$2"
+    local other_sessions
+
+    other_sessions=$(ps ax -o command= | awk -v name="$container_name" -v proj="$project_name" '
+        BEGIN { count=0 }
+        {
+            is_exec = (index($0, "docker exec") && index($0, "-it") && index($0, name) && index($0, "/bin/bash"))
+            if (is_exec && index($0, "-w /root/" proj)) { count++ }
+        }
+        END { print count }
+    ')
+    if [ "$other_sessions" -eq 0 ]; then
+        docker stop "$container_name"
+    else
+        print_info "Skipping stop; $other_sessions other terminal(s) still attached"
+    fi
+}
+
 # Function to start/create container
 start_container() {
     local project_path="$1"
@@ -176,7 +198,7 @@ start_container() {
         print_info "Container '$container_name' is already running"
         print_info "Attaching to container..."
         docker exec -it -e TERM=xterm-256color -w "/root/$project_name" "$container_name" /bin/bash
-        docker stop "$container_name"
+        stop_container_if_last_session "$container_name" "$project_name"
         return
     fi
     
@@ -185,7 +207,7 @@ start_container() {
         print_info "Starting existing container: $container_name"
         docker start "$container_name"
         docker exec -it -e TERM=xterm-256color -w "/root/$project_name" "$container_name" /bin/bash
-        docker stop "$container_name"
+        stop_container_if_last_session "$container_name" "$project_name"
         return
     fi
     
@@ -193,9 +215,11 @@ start_container() {
     print_info "Creating new container: $container_name"
     print_info "Project: $project_path -> ~/$(basename "$project_path")"
 
-    run_new_container "$container_name" "$project_name" "$project_path"
+    start_new_container "$container_name" "$project_name" "$project_path"
+
+    docker exec -it -e TERM=xterm-256color -w "/root/$project_name" "$container_name" /bin/bash
     
-    docker stop "$container_name"
+    stop_container_if_last_session "$container_name" "$project_name"
     
     print_success "Container session ended"
 }
