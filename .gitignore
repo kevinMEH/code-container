@@ -2,6 +2,8 @@
 .codex/*
 .opencode/*
 .gemini/*
+.providers/*
+
 .npm
 pip
 .local
@@ -12,5 +14,6 @@ container.claude.json
 !.codex/.gitkeep
 !.opencode/.gitkeep
 !.gemini/.gitkeep
+!.providers/.gitkeep
 
 .dockerignore

@@ -37,6 +37,7 @@ start_new_container() {
         -v "$SCRIPT_DIR/.codex:/root/.codex" \
         -v "$SCRIPT_DIR/.opencode:/root/.config/opencode" \
         -v "$SCRIPT_DIR/.gemini:/root/.gemini" \
+        -v "$SCRIPT_DIR/.providers:/root/.providers" \
         -v "$SCRIPT_DIR/.npm:/root/.npm" \
         -v "$SCRIPT_DIR/pip:/root/.cache/pip" \
         -v "$SCRIPT_DIR/.local:/root/.local" \
@@ -181,6 +182,13 @@ start_container() {
     mkdir -p "$SCRIPT_DIR/.local"
     mkdir -p "$SCRIPT_DIR/.opencode"
     mkdir -p "$SCRIPT_DIR/.gemini"
+    mkdir -p "$SCRIPT_DIR/.providers"
+
+    if [ ! -f "$SCRIPT_DIR/.providers/providers.json" ]; then
+        print_warning "Missing $SCRIPT_DIR/.providers/providers.json; creating default file"
+        echo '{}' > "$SCRIPT_DIR/.providers/providers.json"
+        chmod 600 "$SCRIPT_DIR/.providers/providers.json"
+    fi
 
     if [ ! -f "$SCRIPT_DIR/container.claude.json" ]; then
         print_warning "Missing $SCRIPT_DIR/container.claude.json; creating default file"
