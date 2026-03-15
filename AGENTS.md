@@ -14,17 +14,17 @@ Pre-setup:
 - Read `./Dockerfile`
 - Read `./container.sh`
 
-Setup:
-1. Ask the user to do this step (requires sudo): Install `container` as global command:
+Setup: Do one step at a time. Do not overload the user with instructions.
+1. Ask user to do this step: Install `container` as global command:
    ```bash
    ln -s "$(pwd)/container.sh" /usr/local/bin/container
    ```
-2. Copy harness configs:
+2. Do for user: Copy harness configs:
    ```bash
    ./copy-configs.sh
    ```
-3. Provide a list of included packages in `Dockerfile`. Then, ask user if they would like to add more packages into container environment. If yes, see `Add Packages/Dependencies` section below.
-4. Build Docker image:
+3. Do for user: Provide a list of included packages in `Dockerfile`. Then, ask user if they would like to add more packages into container environment. If yes, see `Add Packages/Dependencies` section below.
+4. Do for user: Build Docker image:
    ```bash
    container --build
    ```
