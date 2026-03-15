@@ -19,6 +19,7 @@ Setup: Do one step at a time. Do not overload the user with instructions.
    ```bash
    ln -s "$(pwd)/container.sh" /usr/local/bin/container
    ```
+   Do not ask user to run with `sudo`. If insufficient permissions, find an alternative location on user's `$PATH` to link to.
 2. Do for user: Copy harness configs:
    ```bash
    ./copy-configs.sh
