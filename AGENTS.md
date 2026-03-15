@@ -15,7 +15,7 @@ Pre-setup:
 - Read `./container.sh`
 
 Setup:
-1. Install `container` as global command:
+1. Ask the user to do this step (requires sudo): Install `container` as global command:
    ```bash
    ln -s "$(pwd)/container.sh" /usr/local/bin/container
    ```
@@ -23,7 +23,7 @@ Setup:
    ```bash
    ./copy-configs.sh
    ```
-3. Ask users if they would like to add more packages into the container environment. Provide a list of already installed packages in `Dockerfile`. If yes, see `Add Packages/Dependencies` section below.
+3. Provide a list of included packages in `Dockerfile`. Then, ask user if they would like to add more packages into container environment. If yes, see `Add Packages/Dependencies` section below.
 4. Build Docker image:
    ```bash
    container --build
