@@ -14,7 +14,13 @@ Code Container: Isolated Docker environment for your autonomous coding harness.
 - **Docker** — [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine
 - **A POSIX-Compatible System** — Linux, macOS, WSL
 
-## Initial Setup
+## Setup
+
+> [!Tip]
+> Don't want to setup manually? Ask your harness (OpenCode, Codex, CC) to setup for you.
+> ```
+> Help me setup `container`.
+> ```
 
 ### 1. Install as Global Command
 
@@ -116,9 +122,16 @@ You and your harness can work on the same project simultaneously.
 
 ## Customization
 
+> [!Tip]
+> Don't want to customize manually? Ask your harness to customize for you.
+> ```
+> Add the following packages to the container environment: ...
+> Add the following mount points to the container environment: ...
+> ```
+
 **Add tools/packages** — Edit `Dockerfile` and rebuild:
 ```dockerfile
-RUN apt-get update && apt-get install -y postgresql-client redis-tools && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y postgresql-client redis-tools
 ```
 
 **Add shared volumes (caches, config, etc.)** — Edit the `docker run -it` command in `container.sh`:
