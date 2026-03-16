@@ -95,7 +95,7 @@ RUN apt-get update && apt-get install -y postgresql-client redis-tools
 ### Persistence
 
 - **Per-Container**: Packages, file changes, databases, shell history
-- **Shared Across Projects**: Harness config, conversation history, npm/pip caches
+- **Shared Across Projects**: Harness config, conversation history
 - **Read-only from Host**: Git config, SSH keys
 
 ### Simultaneous Work

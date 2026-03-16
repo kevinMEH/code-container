@@ -2,8 +2,6 @@
 .codex/*
 .opencode/*
 .gemini/*
-.npm
-pip
 .local
 
 container.claude.json

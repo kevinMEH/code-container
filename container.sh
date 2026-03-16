@@ -37,8 +37,6 @@ start_new_container() {
         -v "$SCRIPT_DIR/.codex:/root/.codex" \
         -v "$SCRIPT_DIR/.opencode:/root/.config/opencode" \
         -v "$SCRIPT_DIR/.gemini:/root/.gemini" \
-        -v "$SCRIPT_DIR/.npm:/root/.npm" \
-        -v "$SCRIPT_DIR/pip:/root/.cache/pip" \
         -v "$SCRIPT_DIR/.local:/root/.local" \
         -v "$HOME/.gitconfig:/root/.gitconfig:ro" \
         -v "$HOME/.ssh:/root/.ssh:ro" \
@@ -176,8 +174,6 @@ start_container() {
     # Create shared directories if they don't exist
     mkdir -p "$SCRIPT_DIR/.claude"
     mkdir -p "$SCRIPT_DIR/.codex"
-    mkdir -p "$SCRIPT_DIR/.npm"
-    mkdir -p "$SCRIPT_DIR/pip"
     mkdir -p "$SCRIPT_DIR/.local"
     mkdir -p "$SCRIPT_DIR/.opencode"
     mkdir -p "$SCRIPT_DIR/.gemini"
