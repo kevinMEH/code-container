@@ -3,39 +3,25 @@ import * as path from "path";
 import * as fs from "fs";
 import * as crypto from "crypto";
 import { printInfo, printWarning } from "./utils";
+import {
+  CONFIGS_DIR,
+  APPDATA_DIR,
+  DOCKERFILE_PATH,
+  MOUNT_TARGETS,
+} from "./config";
 
 const IMAGE_NAME = "code";
 const IMAGE_TAG = "latest";
+const PACKAGED_DOCKERFILE = path.resolve(__dirname, "..", "Dockerfile");
 
-export const SHARED_DIRS = [
-  ".claude",
-  ".codex",
-  ".local",
-  ".opencode",
-  ".gemini",
-];
-
-export const MOUNT_SOURCES = [
-  ".claude:/root/.claude",
-  "container.claude.json:/root/.claude.json",
-  ".codex:/root/.codex",
-  ".opencode:/root/.config/opencode",
-  ".gemini:/root/.gemini",
-  ".local:/root/.local",
-] as const;
-
-export function getMounts(
-  projectPath: string,
-  projectName: string,
-  scriptDir: string
-): string[] {
+export function getMounts(projectPath: string, projectName: string): string[] {
   const home = process.env.HOME || "";
   const mounts: string[] = [];
 
   mounts.push(`${projectPath}:/root/${projectName}`);
 
-  for (const src of MOUNT_SOURCES) {
-    mounts.push(`${scriptDir}/${src}`);
+  for (const [src, target] of Object.entries(MOUNT_TARGETS)) {
+    mounts.push(`${CONFIGS_DIR}/${src}:${target}`);
   }
 
   mounts.push(`${home}/.gitconfig:/root/.gitconfig:ro`);
@@ -64,10 +50,26 @@ export function imageExists(): boolean {
   return result.status === 0;
 }
 
-export function buildImageRaw(scriptDir: string): boolean {
+export function ensureDockerfile(): void {
+  if (!fs.existsSync(DOCKERFILE_PATH)) {
+    if (fs.existsSync(PACKAGED_DOCKERFILE)) {
+      printInfo(
+        `Dockerfile not found at ${DOCKERFILE_PATH}, copying from package...`
+      );
+      fs.copyFileSync(PACKAGED_DOCKERFILE, DOCKERFILE_PATH);
+    } else {
+      throw new Error(
+        `Dockerfile not found at ${DOCKERFILE_PATH} and no packaged Dockerfile available`
+      );
+    }
+  }
+}
+
+export function buildImageRaw(): boolean {
+  ensureDockerfile();
   const result = spawnSync(
     "docker",
-    ["build", "-t", `${IMAGE_NAME}:${IMAGE_TAG}`, scriptDir],
+    ["build", "-t", `${IMAGE_NAME}:${IMAGE_TAG}`, APPDATA_DIR],
     { stdio: "inherit" }
   );
   return result.status === 0;
@@ -104,10 +106,9 @@ export function removeContainer(containerName: string): void {
 export function createNewContainer(
   containerName: string,
   projectName: string,
-  projectPath: string,
-  scriptDir: string
+  projectPath: string
 ): boolean {
-  const mounts = getMounts(projectPath, projectName, scriptDir);
+  const mounts = getMounts(projectPath, projectName);
   const args = ["run", "-d", "--name", containerName];
 
   args.push("-e", "TERM=xterm-256color");
@@ -181,21 +182,6 @@ export function stopContainerIfLastSession(
     printInfo(
       `Skipping stop; ${otherSessions} other terminal(s) still attached`
     );
-  }
-}
-
-export function ensureSharedDirs(scriptDir: string): void {
-  for (const dir of SHARED_DIRS) {
-    const fullPath = path.join(scriptDir, dir);
-    if (!fs.existsSync(fullPath)) {
-      fs.mkdirSync(fullPath, { recursive: true });
-    }
-  }
-
-  const claudeJsonPath = path.join(scriptDir, "container.claude.json");
-  if (!fs.existsSync(claudeJsonPath)) {
-    printWarning(`Missing ${claudeJsonPath}; creating default file`);
-    fs.writeFileSync(claudeJsonPath, "{}");
   }
 }
 

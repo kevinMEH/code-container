@@ -6,6 +6,10 @@
   "bin": {
     "container": "./dist/main.js"
   },
+  "files": [
+    "dist",
+    "Dockerfile"
+  ],
   "scripts": {
     "build": "tsc && chmod u+x dist/main.js",
     "clean": "rm -rf dist",

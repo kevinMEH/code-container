@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import * as path from "path";
 import { printError, resolveProjectPath } from "./utils";
 import {
   buildImage,
@@ -10,9 +9,6 @@ import {
   listContainers,
   cleanContainers,
 } from "./commands";
-
-const SCRIPT_PATH = __dirname;
-const SCRIPT_DIR = path.resolve(SCRIPT_PATH, "..");
 
 function usage(): void {
   console.log(`
@@ -82,7 +78,7 @@ function main(): void {
   }
 
   if (command === "build") {
-    buildImage(SCRIPT_DIR);
+    buildImage();
     process.exit(0);
   }
 
@@ -97,7 +93,7 @@ function main(): void {
       break;
     case "run":
     case "":
-      runContainer(resolvedPath, SCRIPT_DIR);
+      runContainer(resolvedPath);
       break;
   }
 }

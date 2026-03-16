@@ -13,35 +13,37 @@ import {
   createNewContainer,
   execInteractive,
   stopContainerIfLastSession,
-  ensureSharedDirs,
   listContainersRaw,
   getStoppedContainerIds,
   removeContainersById,
 } from "./docker";
+import { ensureConfigDir } from "./config";
 
-export function buildImage(scriptDir: string): void {
+export function buildImage(): void {
   printInfo("Building Docker image: code:latest");
-  if (!buildImageRaw(scriptDir)) {
+  if (!buildImageRaw()) {
     printError("Failed to build Docker image");
     process.exit(1);
   }
   printSuccess("Docker image built successfully");
 }
 
-export function runContainer(projectPath: string, scriptDir: string): void {
+export function runContainer(projectPath: string): void {
   const containerName = generateContainerName(projectPath);
   const projectName = path.basename(projectPath);
 
   if (!fs.existsSync(projectPath) || !fs.statSync(projectPath).isDirectory()) {
-    printError(`Project directory does not exist or is not a directory: ${projectPath}`);
+    printError(
+      `Project directory does not exist or is not a directory: ${projectPath}`
+    );
     process.exit(1);
   }
 
-  ensureSharedDirs(scriptDir);
+  ensureConfigDir();
 
   if (!imageExists()) {
     printWarning("Docker image not found. Building...");
-    buildImage(scriptDir);
+    buildImage();
   }
 
   if (containerRunning(containerName)) {
@@ -63,7 +65,7 @@ export function runContainer(projectPath: string, scriptDir: string): void {
   printInfo(`Creating new container: ${containerName}`);
   printInfo(`Project: ${projectPath} ~/${projectName}`);
 
-  if (!createNewContainer(containerName, projectName, projectPath, scriptDir)) {
+  if (!createNewContainer(containerName, projectName, projectPath)) {
     printError("Failed to create container");
     process.exit(1);
   }
