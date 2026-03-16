@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Code Container Manager
-# Manages isolated Docker containers for running coding tools on different projects
+# Manages isolated containers (Podman/Docker) for running coding tools on different projects
 
 set -e
 
@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Script directory (where Dockerfile and shared volumes are)
+# Script directory (where Containerfile and shared volumes are)
 SCRIPT_PATH="$0"
 while [ -L "$SCRIPT_PATH" ]; do
     SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
@@ -21,27 +21,96 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 IMAGE_NAME="code"
 IMAGE_TAG="latest"
 
+# Detect container runtime (prefer podman)
+if command -v podman >/dev/null 2>&1; then
+    CONTAINER_RUNTIME="podman"
+elif command -v docker >/dev/null 2>&1; then
+    CONTAINER_RUNTIME="docker"
+else
+    echo -e "${RED}[ERROR]${NC} Neither podman nor docker is installed"
+    exit 1
+fi
+
 # Container launch command; modify to add additional mounts
 start_new_container() {
     local container_name="$1"
     local project_name="$2"
     local project_path="$3"
 
-    docker run -d \
+    # Build optional mounts conditionally
+    local optional_args=""
+
+    # 1Password SSH agent socket
+    local op_agent="$HOME/.1password/agent.sock"
+    if [ -S "$op_agent" ]; then
+        optional_args="$optional_args -v $op_agent:/home/ubuntu/.1password/agent.sock"
+        optional_args="$optional_args -e SSH_AUTH_SOCK=/home/ubuntu/.1password/agent.sock"
+    fi
+
+    # GPG agent SSH socket (for YubiKey SSH auth)
+    local gpg_ssh_socket="/run/user/$(id -u)/gnupg/S.gpg-agent.ssh"
+    if [ -S "$gpg_ssh_socket" ]; then
+        optional_args="$optional_args -v $gpg_ssh_socket:/home/ubuntu/.gnupg-sockets/S.gpg-agent.ssh"
+        # Only set SSH_AUTH_SOCK if 1Password agent isn't already set
+        if [ ! -S "$op_agent" ]; then
+            optional_args="$optional_args -e SSH_AUTH_SOCK=/home/ubuntu/.gnupg-sockets/S.gpg-agent.ssh"
+        fi
+    fi
+
+    # GPG configuration (for YubiKey)
+    if [ -d "$HOME/.gnupg" ]; then
+        optional_args="$optional_args -v $HOME/.gnupg:/home/ubuntu/.gnupg:ro"
+    fi
+
+    # YubiKey USB device passthrough (Yubico vendor ID: 1050)
+    local yubikey_bus=$(lsusb 2>/dev/null | grep -i "yubico\|1050" | head -1 | awk '{print $2}')
+    local yubikey_dev=$(lsusb 2>/dev/null | grep -i "yubico\|1050" | head -1 | awk '{print $4}' | tr -d ':')
+    if [ -n "$yubikey_bus" ] && [ -n "$yubikey_dev" ]; then
+        local yubikey_device="/dev/bus/usb/$yubikey_bus/$yubikey_dev"
+        if [ -e "$yubikey_device" ]; then
+            optional_args="$optional_args --device $yubikey_device"
+        fi
+    fi
+
+    # Z.AI config for GLM models
+    local zai_config="$HOME/.zai.json"
+    if [ -f "$zai_config" ]; then
+        optional_args="$optional_args -v $zai_config:/home/ubuntu/.zai.json:ro"
+    fi
+
+    # Git config (XDG or legacy location)
+    if [ -d "$HOME/.config/git" ]; then
+        optional_args="$optional_args -v $HOME/.config/git:/home/ubuntu/.config/git:ro"
+    elif [ -f "$HOME/.gitconfig" ]; then
+        optional_args="$optional_args -v $HOME/.gitconfig:/home/ubuntu/.gitconfig:ro"
+    fi
+
+    # Claude Code config - mount only safe files, not credentials
+    local claude_configs=""
+    if [ -f "$HOME/.claude/settings.json" ]; then
+        claude_configs="$claude_configs -v $HOME/.claude/settings.json:/home/ubuntu/.claude/settings.json:ro"
+    fi
+    for dir in commands hooks skills agents; do
+        if [ -d "$HOME/.claude/$dir" ]; then
+            claude_configs="$claude_configs -v $HOME/.claude/$dir:/home/ubuntu/.claude/$dir:ro"
+        fi
+    done
+
+    $CONTAINER_RUNTIME run -d \
         --name "$container_name" \
+        --userns=keep-id \
+        --network host \
         -e TERM=xterm-256color \
-        -w "/root/$project_name" \
-        -v "$project_path:/root/$project_name" \
-        -v "$SCRIPT_DIR/.claude:/root/.claude" \
-        -v "$SCRIPT_DIR/container.claude.json:/root/.claude.json" \
-        -v "$SCRIPT_DIR/.codex:/root/.codex" \
-        -v "$SCRIPT_DIR/.opencode:/root/.config/opencode" \
-        -v "$SCRIPT_DIR/.gemini:/root/.gemini" \
-        -v "$SCRIPT_DIR/.npm:/root/.npm" \
-        -v "$SCRIPT_DIR/pip:/root/.cache/pip" \
-        -v "$SCRIPT_DIR/.local:/root/.local" \
-        -v "$HOME/.gitconfig:/root/.gitconfig:ro" \
-        -v "$HOME/.ssh:/root/.ssh:ro" \
+        -w "/home/ubuntu/$project_name" \
+        -v "$project_path:/home/ubuntu/$project_name" \
+        $claude_configs \
+        -v "$SCRIPT_DIR/.codex:/home/ubuntu/.codex" \
+        -v "$SCRIPT_DIR/.opencode:/home/ubuntu/.config/opencode" \
+        -v "$SCRIPT_DIR/.gemini:/home/ubuntu/.gemini" \
+        -v "$SCRIPT_DIR/.npm:/home/ubuntu/.npm" \
+        -v "$SCRIPT_DIR/pip:/home/ubuntu/.cache/pip" \
+        -v "$HOME/.ssh:/home/ubuntu/.ssh:ro" \
+        $optional_args \
         "${IMAGE_NAME}:${IMAGE_TAG}" \
         sleep infinity
 }
@@ -75,11 +144,13 @@ Arguments:
 
 Options:
     -h, --help      Show this help message
-    -b, --build     Force rebuild the Docker image
+    -b, --build     Force rebuild the container image
     -s, --stop      Stop the container for this project
     -r, --remove    Remove the container for this project
     -l, --list      List all Code containers
     --clean         Remove all stopped Code containers
+    --claude        Start Claude (in YOLO mode)
+    --zai           Start Claude with Z.AI/GLM models (requires ~/.zai.json)
 
 Examples:
     $0                          # Uses current directory
@@ -87,6 +158,8 @@ Examples:
     $0 --build
     $0 --stop
     $0 --list
+    $0 --claude                  # Start Claude in YOLO mode
+    $0 --zai                     # Start with Z.AI models
 
 EOF
     exit 0
@@ -113,31 +186,31 @@ generate_container_name() {
     echo "code-${project_name}-${path_hash}"
 }
 
-# Function to check if Docker image exists
+# Function to check if container image exists
 image_exists() {
-    docker image inspect "${IMAGE_NAME}:${IMAGE_TAG}" >/dev/null 2>&1
+    $CONTAINER_RUNTIME image inspect "${IMAGE_NAME}:${IMAGE_TAG}" >/dev/null 2>&1
 }
 
-# Function to build Docker image
+# Function to build container image
 build_image() {
-    print_info "Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}"
-    
+    print_info "Building container image: ${IMAGE_NAME}:${IMAGE_TAG}"
+
     # Build the image
-    docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" "$SCRIPT_DIR"
-    
-    print_success "Docker image built successfully"
+    $CONTAINER_RUNTIME build -t "${IMAGE_NAME}:${IMAGE_TAG}" "$SCRIPT_DIR"
+
+    print_success "Container image built successfully"
 }
 
 # Function to check if container exists
 container_exists() {
     local container_name="$1"
-    docker container inspect "$container_name" >/dev/null 2>&1
+    $CONTAINER_RUNTIME container inspect "$container_name" >/dev/null 2>&1
 }
 
 # Function to check if container is running
 container_running() {
     local container_name="$1"
-    [ "$(docker container inspect -f '{{.State.Running}}' "$container_name" 2>/dev/null)" == "true" ]
+    [ "$($CONTAINER_RUNTIME container inspect -f '{{.State.Running}}' "$container_name" 2>/dev/null)" == "true" ]
 }
 
 # Stop the container only if no other terminal sessions for the project are active.
@@ -146,16 +219,16 @@ stop_container_if_last_session() {
     local project_name="$2"
     local other_sessions
 
-    other_sessions=$(ps ax -o command= | awk -v name="$container_name" -v proj="$project_name" '
+    other_sessions=$(ps ax -o command= | awk -v name="$container_name" -v proj="$project_name" -v runtime="$CONTAINER_RUNTIME" '
         BEGIN { count=0 }
         {
-            is_exec = (index($0, "docker exec") && index($0, "-it") && index($0, name) && index($0, "/bin/bash"))
-            if (is_exec && index($0, "-w /root/" proj)) { count++ }
+            is_exec = (index($0, runtime " exec") && index($0, "-it") && index($0, name) && index($0, "/bin/bash"))
+            if (is_exec && index($0, "-w /home/ubuntu/" proj)) { count++ }
         }
         END { print count }
     ')
     if [ "$other_sessions" -eq 0 ]; then
-        docker stop "$container_name"
+        $CONTAINER_RUNTIME stop -t 0 "$container_name"
     else
         print_info "Skipping stop; $other_sessions other terminal(s) still attached"
     fi
@@ -164,15 +237,17 @@ stop_container_if_last_session() {
 # Function to start/create container
 start_container() {
     local project_path="$1"
+    local use_claude="${2:-false}"
+    local use_zai="${3:-false}"
     local container_name=$(generate_container_name "$project_path")
     local project_name=$(basename "$project_path")
-    
+
     # Validate project path
     if [ ! -d "$project_path" ]; then
         print_error "Project directory does not exist: $project_path"
         exit 1
     fi
-    
+
     # Create shared directories if they don't exist
     mkdir -p "$SCRIPT_DIR/.claude"
     mkdir -p "$SCRIPT_DIR/.codex"
@@ -186,41 +261,89 @@ start_container() {
         print_warning "Missing $SCRIPT_DIR/container.claude.json; creating default file"
         echo '{}' > "$SCRIPT_DIR/container.claude.json"
     fi
-    
+
     # Check if image exists, build if not
     if ! image_exists; then
-        print_warning "Docker image not found. Building..."
+        print_warning "Container image not found. Building..."
         build_image
     fi
-    
+
+    # Determine the command to run
+    local exec_cmd="/bin/bash"
+    local exec_env="-e TERM=xterm-256color"
+
+    # --claude flag: start regular claude in YOLO mode
+    if [ "$use_claude" = "true" ]; then
+        exec_cmd="claude --dangerously-skip-permissions"
+    fi
+
+    # --zai flag: start claude with Z.AI/GLM models in YOLO mode
+    if [ "$use_zai" = "true" ]; then
+        local zai_config="$HOME/.zai.json"
+        if [ ! -f "$zai_config" ]; then
+            print_error "Z.AI config not found: $zai_config"
+            exit 1
+        fi
+
+        # Read Z.AI config and build environment variables
+        if ! command -v jq >/dev/null 2>&1; then
+            print_error "jq is required for --zai option"
+            exit 1
+        fi
+
+        local api_url api_key haiku_model sonnet_model opus_model
+        api_url=$(jq -r '.apiUrl // ""' "$zai_config")
+        api_key=$(jq -r '.apiKey // ""' "$zai_config")
+        haiku_model=$(jq -r '.haikuModel // "glm-4.5-air"' "$zai_config")
+        sonnet_model=$(jq -r '.sonnetModel // "glm-5.0"' "$zai_config")
+        opus_model=$(jq -r '.opusModel // "glm-5.0"' "$zai_config")
+
+        if [ -z "$api_url" ] || [ -z "$api_key" ]; then
+            print_error "apiUrl/apiKey missing in $zai_config"
+            exit 1
+        fi
+
+        local key_hint="${api_key:0:4}...${api_key: -4}"
+        print_info "Z.AI: endpoint=$api_url | haiku=$haiku_model | sonnet=$sonnet_model | opus=$opus_model | key=$key_hint"
+
+        exec_env="$exec_env"
+        exec_env="$exec_env -e ANTHROPIC_BASE_URL=$api_url"
+        exec_env="$exec_env -e ANTHROPIC_AUTH_TOKEN=$api_key"
+        exec_env="$exec_env -e ANTHROPIC_DEFAULT_HAIKU_MODEL=$haiku_model"
+        exec_env="$exec_env -e ANTHROPIC_DEFAULT_SONNET_MODEL=$sonnet_model"
+        exec_env="$exec_env -e ANTHROPIC_DEFAULT_OPUS_MODEL=$opus_model"
+
+        exec_cmd="claude --dangerously-skip-permissions"
+    fi
+
     # If container exists and is running, attach to it
     if container_running "$container_name"; then
         print_info "Container '$container_name' is already running"
         print_info "Attaching to container..."
-        docker exec -it -e TERM=xterm-256color -w "/root/$project_name" "$container_name" /bin/bash
+        $CONTAINER_RUNTIME exec -it $exec_env -w "/home/ubuntu/$project_name" "$container_name" bash -l -c "$exec_cmd"
         stop_container_if_last_session "$container_name" "$project_name"
         return
     fi
-    
+
     # If container exists but is stopped, start it
     if container_exists "$container_name"; then
         print_info "Starting existing container: $container_name"
-        docker start "$container_name"
-        docker exec -it -e TERM=xterm-256color -w "/root/$project_name" "$container_name" /bin/bash
+        $CONTAINER_RUNTIME start "$container_name"
+        $CONTAINER_RUNTIME exec -it $exec_env -w "/home/ubuntu/$project_name" "$container_name" bash -l -c "$exec_cmd"
         stop_container_if_last_session "$container_name" "$project_name"
         return
     fi
-    
+
     # Create and start new container
     print_info "Creating new container: $container_name"
     print_info "Project: $project_path -> ~/$(basename "$project_path")"
 
     start_new_container "$container_name" "$project_name" "$project_path"
 
-    docker exec -it -e TERM=xterm-256color -w "/root/$project_name" "$container_name" /bin/bash
-    
+    $CONTAINER_RUNTIME exec -it $exec_env -w "/home/ubuntu/$project_name" "$container_name" bash -l -c "$exec_cmd"
+
     stop_container_if_last_session "$container_name" "$project_name"
-    
+
     print_success "Container session ended"
 }
 
@@ -236,7 +359,7 @@ stop_container() {
     
     if container_running "$container_name"; then
         print_info "Stopping container: $container_name"
-        docker stop "$container_name"
+        $CONTAINER_RUNTIME stop -t 0 "$container_name"
         print_success "Container stopped"
     else
         print_warning "Container is not running: $container_name"
@@ -255,32 +378,32 @@ remove_container() {
     
     if container_running "$container_name"; then
         print_info "Stopping container: $container_name"
-        docker stop "$container_name"
+        $CONTAINER_RUNTIME stop -t 0 "$container_name"
     fi
     
     print_info "Removing container: $container_name"
-    docker rm "$container_name"
+    $CONTAINER_RUNTIME rm "$container_name"
     print_success "Container removed"
 }
 
 # Function to list containers
 list_containers() {
     print_info "Code Containers:"
-    docker ps -a --filter "name=code-" --format "table {{.Names}}\t{{.Status}}\t{{.CreatedAt}}"
+    $CONTAINER_RUNTIME ps -a --filter "name=code-" --format "table {{.Names}}\t{{.Status}}\t{{.CreatedAt}}"
 }
 
 # Function to clean up stopped containers
 clean_containers() {
     print_info "Removing all stopped Code containers..."
     local container_ids
-    container_ids=$(docker ps -a --filter "name=code-" --filter "status=exited" --quiet)
+    container_ids=$($CONTAINER_RUNTIME ps -a --filter "name=code-" --filter "status=exited" --quiet)
 
     if [ -z "$container_ids" ]; then
         print_info "No stopped Code containers to remove"
         return
     fi
 
-    docker rm $container_ids
+    $CONTAINER_RUNTIME rm $container_ids
 
     print_success "Cleanup complete"
 }
@@ -291,6 +414,8 @@ STOP_FLAG=false
 REMOVE_FLAG=false
 LIST_FLAG=false
 CLEAN_FLAG=false
+CLAUDE_FLAG=false
+ZAI_FLAG=false
 PROJECT_PATH=""
 
 while [[ $# -gt 0 ]]; do
@@ -316,6 +441,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --clean)
             CLEAN_FLAG=true
+            shift
+            ;;
+        --claude)
+            CLAUDE_FLAG=true
+            shift
+            ;;
+        --zai)
+            ZAI_FLAG=true
             shift
             ;;
         *)
@@ -366,4 +499,4 @@ if [ "$REMOVE_FLAG" = true ]; then
 fi
 
 # Default operation: start container
-start_container "$PROJECT_PATH"
+start_container "$PROJECT_PATH" "$CLAUDE_FLAG" "$ZAI_FLAG"

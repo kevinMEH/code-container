@@ -24,49 +24,40 @@ RUN apt-get update && apt-get install -y \
     vim \
     tree
 
-# Install NVM (Node Version Manager) and Node.js
-ENV NVM_DIR=/root/.nvm
-ENV NODE_VERSION=22
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash \
-    && . "$NVM_DIR/nvm.sh" \
-    && nvm install ${NODE_VERSION} \
-    && nvm use ${NODE_VERSION} \
-    && nvm alias default ${NODE_VERSION} \
-    && ln -sf "$NVM_DIR/versions/node/$(nvm current)/bin/"* /usr/local/bin/
+# Use existing ubuntu user (UID 1000)
+USER ubuntu
+WORKDIR /home/ubuntu
 
-RUN apt-get update \
-    && apt-get install -y \
-        python3 \
-        python3-dev \
-        python3-venv \
-        python3-pip
+# Install mise (modern runtime manager)
+RUN curl -fsSL https://mise.run | bash
+ENV PATH="/home/ubuntu/.local/share/mise/shims:/home/ubuntu/.local/bin:${PATH}"
 
-# Create python symlink pointing to python3
-RUN ln -sf /usr/bin/python3 /usr/bin/python
+# Configure mise tools
+RUN mise settings set experimental true && \
+    mise use -g \
+        node@22 \
+        pnpm@latest \
+        python@latest \
+        fd \
+        ripgrep \
+        "github:steveyegge/beads@latest" \
+        "github:steveyegge/gastown@latest" \
+        npm:opencode-ai \
+        npm:@openai/codex \
+        npm:@google/gemini-cli && \
+    mise install && \
+    mise trust ~/.config/mise/config.toml
 
 # Install Claude Code globally via official installer
 RUN curl -fsSL https://claude.ai/install.sh | bash
-RUN echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-
-# Install Opencode
-RUN npm install -g opencode-ai
-
-# Install OpenAI Codex CLI
-RUN npm install -g @openai/codex
-
-# Install Gemini CLI
-RUN npm install -g @google/gemini-cli
-
-# Set working directory to root home
-WORKDIR /root
 
 # Configure bash prompt to show container name
-RUN echo 'PS1="\[\033[01;32m\][code-container]\[\033[00m\] \[\033[01;34m\]\w\[\033[00m\]\$ "' >> /root/.bashrc
+RUN echo 'PS1="\[\033[01;32m\][code-container]\[\033[00m\] \[\033[01;34m\]\w\[\033[00m\]\$ "' >> /home/ubuntu/.bashrc
 
-# Source NVM in bashrc for interactive shells
-RUN echo 'export NVM_DIR="$HOME/.nvm"' >> /root/.bashrc \
-    && echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /root/.bashrc \
-    && echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' >> /root/.bashrc
+# Source mise in bashrc for interactive shells
+RUN echo 'eval "$(mise activate bash)"' >> /home/ubuntu/.bashrc && \
+    echo 'mise trust -a 2>/dev/null' >> /home/ubuntu/.bashrc && \
+    echo 'mise up 2>/dev/null' >> /home/ubuntu/.bashrc
 
 # Default command: bash shell
 CMD ["/bin/bash"]
