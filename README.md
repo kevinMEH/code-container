@@ -1,63 +1,48 @@
-# Code Container
+<p align="center">
+  <img src=".github/README/banner.png" alt="Banner" />
+</p>
 
-Code Container: Isolated Docker environment for your autonomous coding harness.
+#### Code Container: Isolated Docker environment for your autonomous coding harness.
 
-## Overview
+## Quickstart
 
-- **Project Isolation**: One container per project with complete isolation
-- **State Persistence**: All changes and packages persist between sessions
-- **Shared Resources**: npm cache, pip cache, and Claude history shared across projects
-- **Security**: Changes within a container don't affect your host or other projects
-
-## Prerequisites
+### Prerequisites
 
 - **Docker** — [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine
 - **A POSIX-Compatible System** — Linux, macOS, WSL
 
-## Setup
+### Instructions
 
 > [!Tip]
 > Don't want to setup manually? Ask your harness (OpenCode, Codex, CC) to setup for you.
 > ```
-> Help me setup `container`.
+> Help me setup `container`
 > ```
 
-### 1. Install as Global Command
+1. **Install as Global Command**: Install the `container` command in a PATH-tracked folder:
+  ```bash
+  ln -s "$(pwd)/container.sh" /usr/local/bin/container
+  ```
 
-To use the `container` command from anywhere, create a symlink in a PATH-tracked folder:
-```bash
-ln -s "$(pwd)/container.sh" /usr/local/bin/container
-```
+2. **Copy Configurations**: Copy harness configs into this repo:
+  ```bash
+  ./copy-configs.sh
+  ```
+  Or, if copying manually:
+  ```bash
+  cp -R ~/.config/opencode/ ./.opencode/  # OpenCode
+  cp -R ~/.codex/ ./.codex/               # Codex
+  cp -R ~/.claude/ ./.claude/ && cp ~/.claude.json container.claude.json  # Claude Code
+  ```
 
-### 2. Configure Harnesses
+3. Build Docker Image
+  ```bash
+  container --build    # Run once, or when rebuilding
+  ```
 
-Copy configurations into this repo (shared across all containers):
-```bash
-# Script to copy harness configs
-./copy-configs.sh
-```
+## Usage
 
-Or, if copying manually:
-```bash
-# OpenCode
-cp -R ~/.config/opencode/ ./.opencode/
-# Codex
-cp -R ~/.codex/ ./.codex/
-# Claude Code
-cp -R ~/.claude/ ./.claude/ && cp ~/.claude.json container.claude.json
-```
-
-### 3. Build Docker Image
-
-```bash
-container --build    # Run once, or when rebuilding
-```
-
-**Includes**: Ubuntu 24.04 LTS, Node.js 22 LTS, Python 3, Claude Code, OpenCode, OpenAI Codex CLI, git. Add other tools by modifying the `Dockerfile`.
-
-## Primary Usage
-
-Navigate to any project and run `container` to mount the project and open the container.
+Navigate to any project and run `container` to mount project and enter container.
 ```bash
 cd /path/to/your/project
 container                    # Enter container
@@ -66,10 +51,8 @@ container                    # Enter container
 Inside the container: Start your harness and develop like normal.
 ```bash
 opencode                     # Start OpenCode
-codex                        # Start OpenAI Codex
 npm install <package>        # Persists per container
-pip install <package>        # Persists per container
-exit                         # Auto-stops container on exit
+# ...
 ```
 
 Container state is saved. Next invocation resumes where you left off. AI conversations and settings persist across all projects.
@@ -80,7 +63,7 @@ Destructive actions are localized inside containers. You can let your harness ru
 
 To configure your harness to run without permissions, see [Permissions.md](Permissions.md) for instructions.
 
-## Common Commands
+### Common Commands
 
 ```bash
 container                  # Enter the container
@@ -88,39 +71,9 @@ container --list           # List all containers
 container --stop           # Stop current project's container
 container --remove         # Remove current project's container
 container --build          # Rebuild Docker image
-
-# With an explicit path:
-container /path/to/project
-container --stop /path/to/project
-container --remove /path/to/project
 ```
 
-## What Persists
-
-**Per-Container**:
-- All installed system packages, npm packages, Python packages
-- All file modifications, databases, shell history
-- Container filesystem state
-
-**Shared Across All Projects:**
-- Harness configuration and conversation history
-- npm and pip download caches
-- Python user packages
-
-**Read-only from Host:**
-- Git configuration, SSH keys
-
-## Simultaneous Work
-
-You and your harness can work on the same project simultaneously.
-
-**Safe**: Reading files, editing files, most development operations
-
-**Avoid**: Simultaneous Git operations from both sides, installing conflicting `node_modules`
-
-**Recommended Workflow**: Let your harness run autonomously in the container while you work; review changes and commit.
-
-## Customization
+### Customization
 
 > [!Tip]
 > Don't want to customize manually? Ask your harness to customize for you.
@@ -134,10 +87,26 @@ You and your harness can work on the same project simultaneously.
 RUN apt-get update && apt-get install -y postgresql-client redis-tools
 ```
 
-**Add shared volumes (caches, config, etc.)** — Edit the `docker run -it` command in `container.sh`:
+**Add volumes**: Edit the `docker run` command in `container.sh`:
 ```bash
--v "$SCRIPT_DIR/new-shared-dir:/root/target-path"
+-v "$SCRIPT_DIR/local/path:/root/target"
 ```
+
+### Persistence
+
+- **Per-Container**: Packages, file changes, databases, shell history
+- **Shared Across Projects**: Harness config, conversation history, npm/pip caches
+- **Read-only from Host**: Git config, SSH keys
+
+### Simultaneous Work
+
+You and your harness can work on the same project simultaneously.
+
+- **Safe**: Reading files, editing files, most development operations
+
+- **Avoid**: Simultaneous Git operations from both sides, installing conflicting `node_modules`
+
+- **Recommended Workflow**: Let your harness run autonomously in the container while you work; review changes and commit.
 
 ## Security
 
