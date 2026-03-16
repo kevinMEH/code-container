@@ -64,27 +64,30 @@ print_error() {
 # Function to display usage
 usage() {
     cat << EOF
-Usage: $0 [OPTIONS] [PROJECT_PATH]
+Usage: $0 [COMMAND] [PROJECT_PATH]
 
 Manage Code containers for isolated project environments.
+
+Commands:
+    (none)         Start container for current directory (default)
+    run            Start container for specified project path
+    build          Build the Docker image
+    stop           Stop the container for this project
+    remove         Remove the container for this project
+    list           List all Code containers
+    clean          Remove all stopped Code containers
 
 Arguments:
     PROJECT_PATH    Path to the project directory (defaults to current directory)
 
-Options:
-    -h, --help      Show this help message
-    -b, --build     Force rebuild the Docker image
-    -s, --stop      Stop the container for this project
-    -r, --remove    Remove the container for this project
-    -l, --list      List all Code containers
-    --clean         Remove all stopped Code containers
-
 Examples:
-    $0                          # Uses current directory
-    $0 /Users/kevin/my-project
-    $0 --build
-    $0 --stop
-    $0 --list
+    $0                          # Start container for current directory
+    $0 run /path/to/project     # Start container for specific project
+    $0 build                    # Build Docker image
+    $0 stop                     # Stop container for current directory
+    $0 remove /path/to/project  # Remove container for specific project
+    $0 list                     # List all containers
+    $0 clean                    # Clean up stopped containers
 
 EOF
     exit 0
@@ -282,58 +285,48 @@ clean_containers() {
 }
 
 # Parse command line arguments
-BUILD_FLAG=false
-STOP_FLAG=false
-REMOVE_FLAG=false
-LIST_FLAG=false
-CLEAN_FLAG=false
+COMMAND=""
 PROJECT_PATH=""
 
-while [[ $# -gt 0 ]]; do
+if [[ $# -gt 0 ]]; then
     case $1 in
-        -h|--help)
+        help)
             usage
             ;;
-        -b|--build)
-            BUILD_FLAG=true
-            shift
-            ;;
-        -s|--stop)
-            STOP_FLAG=true
-            shift
-            ;;
-        -r|--remove)
-            REMOVE_FLAG=true
-            shift
-            ;;
-        -l|--list)
-            LIST_FLAG=true
-            shift
-            ;;
-        --clean)
-            CLEAN_FLAG=true
+        run|build|stop|remove|list|clean)
+            COMMAND="$1"
             shift
             ;;
         *)
-            if [ -z "$PROJECT_PATH" ]; then
-                PROJECT_PATH="$1"
-            else
-                print_error "Unknown argument: $1"
-                usage
-            fi
-            shift
+            print_error "Unknown command: $1"
+            usage
             ;;
     esac
-done
+fi
 
-# Handle flags
-if [ "$LIST_FLAG" = true ]; then
+if [[ $# -gt 0 ]]; then
+    PROJECT_PATH="$1"
+    shift
+fi
+
+if [[ $# -gt 0 ]]; then
+    print_error "Unexpected argument: $1"
+    usage
+fi
+
+# Handle commands that don't need project path
+if [ "$COMMAND" = "list" ]; then
     list_containers
     exit 0
 fi
 
-if [ "$CLEAN_FLAG" = true ]; then
+if [ "$COMMAND" = "clean" ]; then
     clean_containers
+    exit 0
+fi
+
+if [ "$COMMAND" = "build" ]; then
+    build_image
     exit 0
 fi
 
@@ -345,21 +338,15 @@ fi
 # Convert to absolute path
 PROJECT_PATH=$(cd "$PROJECT_PATH" 2>/dev/null && pwd || echo "$PROJECT_PATH")
 
-# Handle operations
-if [ "$BUILD_FLAG" = true ]; then
-    build_image
-    exit 0
-fi
-
-if [ "$STOP_FLAG" = true ]; then
-    stop_container "$PROJECT_PATH"
-    exit 0
-fi
-
-if [ "$REMOVE_FLAG" = true ]; then
-    remove_container "$PROJECT_PATH"
-    exit 0
-fi
-
-# Default operation: start container
-start_container "$PROJECT_PATH"
+# Handle operations with project path
+case "$COMMAND" in
+    stop)
+        stop_container "$PROJECT_PATH"
+        ;;
+    remove)
+        remove_container "$PROJECT_PATH"
+        ;;
+    run|"")
+        start_container "$PROJECT_PATH"
+        ;;
+esac
