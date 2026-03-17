@@ -1,5 +1,5 @@
 <p align="center">
-  <img src=".github/README/banner.png" alt="Banner" />
+  <img src="https://raw.githubusercontent.com/kevinMEH/code-container/main/.github/README/banner.png" alt="Banner" />
 </p>
 
 #### Code Container: Isolated Docker environment for your autonomous coding harness.
