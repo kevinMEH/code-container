@@ -23,7 +23,14 @@
     "development",
     "cli"
   ],
+  "author": "kevinMEH",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kevinMEH/code-container"
+  },
+  "bugs": "https://github.com/kevinMEH/code-container/issues",
+  "homepage": "https://github.com/kevinMEH/code-container",
   "devDependencies": {
     "@types/node": "^20.19.37",
     "typescript": "^5.9.3"
