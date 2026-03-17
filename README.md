@@ -4,6 +4,8 @@
 
 #### Code Container: Isolated Docker environment for your autonomous coding harness.
 
+#### Simple. Lightweight. Secure.
+
 ## Quickstart
 
 > [!Note]
@@ -21,18 +23,23 @@
 
 ### Installation
 
-On first run, `container` will prompt you to copy your AI harness configs (OpenCode, Codex, Claude Code, Gemini) from `~/` to `~/.code-container/configs` for mounting to the container. You can also run:
+1. `container` is available as a NPM package. To install, simply run:
+    ```bash
+    # TODO: Add install command
+    ```
 
-```bash
-container init
-```
+2. Then run the following to copy all your AI harness configs from `~/` to `~/.code-container/configs` for mounting onto the container.
+    ```bash
+    container init
+    ```
+    Alternatively, you can copy configs manually:
+    - `~/.config/opencode` → `~/.code-container/configs/.opencode`
+    - `~/.codex` → `~/.code-container/configs/.codex`
+    - `~/.claude` → `~/.code-container/configs/.claude`
+    - `~/.claude.json` → `~/.code-container/configs/.claude.json`
+    - `~/.gemini` → `~/.code-container/configs/.gemini`
 
-This copies configs from:
-- `~/.config/opencode` → `~/.code-container/configs/.opencode`
-- `~/.codex` → `~/.code-container/configs/.codex`
-- `~/.claude` → `~/.code-container/configs/.claude`
-- `~/.claude.json` → `~/.code-container/configs/.claude.json`
-- `~/.gemini` → `~/.code-container/configs/.gemini`
+You're done 🎉; `container` is now ready to use.
 
 ## Usage
 
@@ -51,12 +58,6 @@ npm install <package>        # Persists per container
 
 Container state is saved. Next invocation resumes where you left off. AI conversations and settings persist across all projects.
 
-### Container Isolation
-
-Destructive actions are localized inside containers. You can let your harness run with full permissions.
-
-To configure your harness to run without permissions, see [Permissions.md](Permissions.md) for instructions.
-
 ### Common Commands
 
 ```bash
@@ -70,50 +71,68 @@ container clean            # Remove all stopped containers
 container init             # Copy/recopy config files
 ```
 
+## Features
+
+### Unhindered Agents
+
+> Don't want to configure manually? Clone this repo and ask your harness to configure for you.
+> ```
+> Please configure all my container harnesses to run without permissions.
+> ```
+
+Destructive actions are localized inside containers.
+- You can let your harness run with full permissions
+- To configure your harness to run without permissions, see [`Permissions.md`](Permissions.md).
+
 ### Customization
 
-> [!Tip]
-> Don't want to customize manually? Ask your harness to customize for you.
+> Don't want to customize manually? Clone this repo and ask your harness to customize for you.
 > ```
 > Add the following packages to the container environment: ...
 > Add a custom mount point to the container environment: ...
 > ```
 
-**Add tools/packages** — Edit `~/.code-container/Dockerfile` and rebuild:
+Easily add your own tooling & mount points.
+
+**Adding tools/packages**: Edit `~/.code-container/Dockerfile` and rebuild:
+
 ```dockerfile
 RUN apt-get update && apt-get install -y postgresql-client redis-tools
 ```
 
-**Add mount points** — Edit `~/.code-container/MOUNTS.txt`:
+**Adding mount points**: Edit `~/.code-container/MOUNTS.txt` and reinitialize containers:
+
 ```
-/path/on/host:/path/in/container
-/path/on/host:/path/in/container:ro
+/absolute/path/on/host:/path/in/container
+/absolute/path/on/host:/path/in/container:ro
 ```
 
-Each line is a mount mapping. Lines starting with `#` are ignored. Note that mounts are set at the creation of a container; to update mounts for an existing container, remove and restart.
+### Security
 
-### Persistence
-
-- **Per-Container**: Packages, file changes, databases, shell history
-- **Shared Across Projects**: Harness config, conversation history
-- **Read-only from Host**: Git config, SSH keys
+- Host filesystem protected; destructive operations will only affect the container
+- Project isolation prevents cross-contamination across containers
+- **Note:** Git config and SSH keys are mounted read-only from host to support Git operations.
+- **Caution:** Project files can still be deleted by harness; always use upstream version control
+- **Caution:** Network access is still available; information may still be exfiltrated over network
 
 ### Simultaneous Work
 
-You and your harness can work on the same project simultaneously.
+You and multiple agents can work on the same project simultaneously.
 
 - **Safe**: Reading files, editing files, most development operations
-
 - **Avoid**: Simultaneous Git operations from both sides, installing conflicting `node_modules`
-
 - **Recommended Workflow**: Let your harness run autonomously in the container while you work; review changes and commit.
 
-## Security
+### Persistence
 
-- SSH keys and Git config mounted read-only
-- Project isolation prevents cross-contamination across containers
-- Host filesystem protected (access limited to mounted directories)
+- Changes within a container persists across sessions.
+- Harness configurations and configuration histories are shared across containers.
 
-**Limitations:**
-- Network access still available; information may still be exfiltrated over network
-- Project files can still be deleted by harness; always use upstream version control
+## Uninstalling
+
+To uninstall `container`, uninstall the NPM package and remove `~/.code-container`:
+```bash
+# TODO: Add uninstall command
+rm -rf ~/.code-container
+```
+Warning: Consider backing up the harness configurations in `~/.code-container/configs` before removing.

@@ -2,57 +2,74 @@
 
 Repo: https://github.com/kevinMEH/code-container
 
-This file contains instructions for AI coding assistants on how to setup and customize `container` for users.
+This file contains instructions for AI coding assistants on how to setup and customize `container` on behalf of users.
 
-Note: You are not allowed to run the `container` command as it will bring up an interactive shell inside the container. It is meant for user consumption only.
+Note: You are not allowed to run the `container` command as it will bring up an interactive Docker shell; you will thus get stuck as you won't be able to exit the shell. It is meant for user consumption only.
 
 ## Setup Instructions
 
 If the user asks you to setup `container`, follow the following steps.
 
 Pre-setup:
-- Read `./Dockerfile`
-- Read `./container.sh`
+- Read `./README.md`
 
-Setup: Do one step at a time. Do not overload the user with instructions.
-1. Ask user to do this step: Install `container` as global command:
+Setup: Do for the user, one step at a time.
+1. Install `container` as NPM package:
    ```bash
-   ln -s "$(pwd)/container.sh" /usr/local/bin/container
+   npm install -g code-container
    ```
-   Do not ask user to run with `sudo`. If insufficient permissions, find an alternative location on user's `$PATH` to link to.
-2. Do for user: Copy harness configs:
+2. After run, `container init` to copy the user's harness configs over.
    ```bash
-   ./copy-configs.sh
+   container init
    ```
-3. Do for user: Provide a list of included packages in `Dockerfile`. Then, ask user if they would like to add more packages into container environment. If yes, see `Add Packages/Dependencies` section below.
-4. Do for user: Build Docker image:
+3. Setup is done. Now, read `~/.code-container/Dockerfile`, which is the default packaged Dockerfile. Provide a brief list of included packages to the user. Then, ask user if they would like to add more packages into container environment. If yes, see `Add Packages/Dependencies` section below.
+4. Build the Docker image for the user. Before you build, tell the user that building the image may take up to 5 minutes.
    ```bash
-   container --build
+   container build
    ```
 
 Post-setup:
 1. Provide instructions on how to use container:
-  ```
-  cd /path/to/project
-  container
-  opencode # OR: codex OR: claude
-  ```
+   ```
+   cd /path/to/project
+   container
+   opencode # OR: codex OR: claude
+   ```
 2. Give users a quick overview of common commands.
-  ```bash
-  container
-  container --build          # Rebuild Docker image
-  container --list           # List all containers
-  container --stop           # Stop current container
-  container --remove         # Remove current container
-  container --clean          # Remove all stopped containers
-  ```
-3. Ask users if they would like to customize local harness permissions to disable permission prompts. If yes, see Harness Permissions below.
+   ```bash
+   container                  # Enter the container
+   container build            # Build Docker image
+   container init             # Copy/recopy config files
+   container list             # List all containers
+   container stop             # Stop current project's container
+   container remove            # Remove current project's container
+   container clean            # Remove all stopped containers
+   ```
+3. Ask users if they would like to customize local harness permissions to disable permission prompts. If yes, see `Harness Permissions` below.
+
+## Storage Structure
+
+All container data is stored in `~/.code-container/`:
+
+```
+~/.code-container/
+├── configs/          # Harness configs (mounted to containers)
+│   ├── .claude/
+│   ├── .claude.json
+│   ├── .codex/
+│   ├── .gemini/
+│   ├── .local/
+│   └── .opencode/
+├── Dockerfile        # Custom Dockerfile
+├── MOUNTS.txt        # Additional mount points
+└── settings.json     # Internal settings
+```
 
 ## Customization
 
 ### Add Packages/Dependencies (Dockerfile)
 
-Add new tools by extending the RUN commands in `Dockerfile`:
+Add new tools by extending the RUN commands in `~/.code-container/Dockerfile`:
 
 ```dockerfile
 # System packages (Ubuntu/Debian)
@@ -68,31 +85,24 @@ RUN pip install requests pandas
 ```
 
 **After modifying:**
-- Run `container --build` to rebuild.
-- Run `container --remove` or `container --clean` to remove outdated containers based on the old image.
+- Run `container build` to rebuild.
 
-### Add Mount Points (container.sh)
+### Add Mount Points (MOUNTS.txt)
 
-Add shared volumes by modifying `start_new_container()` in `container.sh`:
+Add shared volumes by editing `~/.code-container/MOUNTS.txt`:
 
-```bash
-# Shared directory (persists across containers)
--v "$SCRIPT_DIR/custom-dir:/root/target-path"
+```
+# Shared directory (persists across containers, readable, writable)
+/absolute/path/on/host:/root/target-path
 
 # Read-only mount from host
--v "$HOME/.config:/root/.config:ro"
+/absolute/path/on/host:/root/target-path:ro
 ```
 
-**After modifying:** No rebuild needed; changes apply to new containers.
+**After modifying:** No rebuild needed. However, mounts will only be applied to new containers. Inform users that old containers may have to be `container remove` and restarted.
 
 ## Harness Permissions
 
 If the user asks you to configure harnesses to run without permission prompts inside `container`, read and follow instructions in [Permissions.md](/Permissions.md).
 
-Note: You may only modify the user's configuration files in this repository only. Do not modify the files in their home directory (`~/`).
-
-## What Persists
-
-**Per-container:** All installed packages, file changes, databases, shell history
-**Shared:** npm/pip caches, AI harness configs/conversations, Python user packages
-**Read-only:** Git config, SSH keys
+Note: Modify the configuration files inside `~/.code-container/configs` only.
