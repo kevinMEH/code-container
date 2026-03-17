@@ -31,6 +31,7 @@ import {
   saveSettings,
   copyConfigs,
 } from "./config";
+import { ensureMountsFile } from "./mounts";
 
 export function buildImage(): void {
   printInfo(`Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}`);
@@ -87,7 +88,8 @@ export async function init(isStartup: boolean = false): Promise<void> {
   }
 }
 
-export function runContainer(projectPath: string): void {
+export async function runContainer(projectPath: string): Promise<void> {
+  await ensureMountsFile();
   const containerName = generateContainerName(projectPath);
   const projectName = path.basename(projectPath);
 

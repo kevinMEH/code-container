@@ -3,7 +3,8 @@ import * as path from "path";
 import * as fs from "fs";
 import * as crypto from "crypto";
 import { printInfo, printError } from "./utils";
-import { APPDATA_DIR, DOCKERFILE_PATH, MOUNTS_PATH } from "./config";
+import { APPDATA_DIR, DOCKERFILE_PATH } from "./config";
+import { loadMounts } from "./mounts";
 
 export const IMAGE_NAME = "code-container";
 export const IMAGE_TAG = "latest";
@@ -20,26 +21,11 @@ export function checkDocker(): void {
   }
 }
 
-function loadMounts(): string[] {
-  if (!fs.existsSync(MOUNTS_PATH)) {
-    fs.writeFileSync(MOUNTS_PATH, "", { mode: 0o600 });
-    return [];
-  }
-  const content = fs.readFileSync(MOUNTS_PATH, "utf-8");
-  return content
-    .split("\n")
-    .map(line => line.trim())
-    .filter(line => line && !line.startsWith("#"));
-}
-
 export function getMounts(projectPath: string, projectName: string): string[] {
   const mounts: string[] = [];
-
   mounts.push(`${projectPath}:/root/${projectName}`);
-
   const fileMounts = loadMounts();
   mounts.push(...fileMounts);
-
   return mounts;
 }
 

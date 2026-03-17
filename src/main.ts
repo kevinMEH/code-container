@@ -106,7 +106,7 @@ async function main(): Promise<void> {
       return;
     case "run":
     case "":
-      runContainer(resolvedPath);
+      await runContainer(resolvedPath);
       return;
   }
 }
