@@ -10,6 +10,7 @@ import {
   cleanContainers,
   init,
 } from "./commands";
+import { checkDocker } from "./docker";
 
 function usage(): void {
   console.log(`
@@ -78,6 +79,14 @@ async function main(): Promise<void> {
     }
   }
 
+  if (command === "init") {
+    await init();
+    return;
+  }
+
+  // Note: All commands below require Docker.
+  checkDocker();
+
   if (command === "list") {
     listContainers();
     return;
@@ -90,11 +99,6 @@ async function main(): Promise<void> {
 
   if (command === "build") {
     buildImage();
-    return;
-  }
-
-  if (command === "init") {
-    await init();
     return;
   }
 

@@ -2,7 +2,7 @@ import { spawnSync } from "child_process";
 import * as path from "path";
 import * as fs from "fs";
 import * as crypto from "crypto";
-import { printInfo, printWarning } from "./utils";
+import { printInfo, printError } from "./utils";
 import {
   CONFIGS_DIR,
   APPDATA_DIR,
@@ -13,6 +13,16 @@ import {
 const IMAGE_NAME = "code";
 const IMAGE_TAG = "latest";
 const PACKAGED_DOCKERFILE = path.resolve(__dirname, "..", "Dockerfile");
+
+export function checkDocker(): void {
+  const result = spawnSync("docker", ["info"], { stdio: "pipe" });
+  if (result.status !== 0) {
+    printError(
+      "Docker is not available. Please install Docker: https://docs.docker.com/get-docker/"
+    );
+    process.exit(1);
+  }
+}
 
 export function getMounts(projectPath: string, projectName: string): string[] {
   const home = process.env.HOME || "";
