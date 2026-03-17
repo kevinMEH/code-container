@@ -6,6 +6,14 @@
 
 ## Quickstart
 
+> [!Note]
+> Are you still on the shell script version of `container` (container.sh)? Migrate to the NPM package by running the following:
+> ```bash
+> # TODO: Add install command
+> bash scripts/migrate.sh     # Migrate configs over to ~/.code-container/configs
+> bash scripts/cleanup.sh     # Optional: Cleanup config files
+> ```
+
 ### Prerequisites
 
 - **Docker** — [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine
