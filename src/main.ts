@@ -84,39 +84,30 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Note: All commands below require Docker.
   checkDocker();
-
-  if (command === "list") {
-    listContainers();
-    return;
-  }
-
-  if (command === "clean") {
-    cleanContainers();
-    return;
-  }
-
-  if (command === "build") {
-    buildImage();
-    return;
-  }
-
   await init(true);
-
   const resolvedPath = resolveProjectPath(projectPath);
 
   switch (command) {
+    case "list":
+      listContainers();
+      return;
+    case "clean":
+      cleanContainers();
+      return;
+    case "build":
+      buildImage();
+      return;
     case "stop":
       stopContainerForProject(resolvedPath);
-      break;
+      return;
     case "remove":
       removeContainerForProject(resolvedPath);
-      break;
+      return;
     case "run":
     case "":
       runContainer(resolvedPath);
-      break;
+      return;
   }
 }
 
