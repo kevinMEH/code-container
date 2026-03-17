@@ -31,6 +31,11 @@
     - `~/.claude.json` → `~/.code-container/configs/.claude.json`
     - `~/.gemini` → `~/.code-container/configs/.gemini`
 
+3. Finally, build the Docker image. This may take up to 5 minutes.
+    ```bash
+    container build
+    ```
+
 You're done 🎉; `container` is now ready to use.
 
 ### Migration from `container.sh`
