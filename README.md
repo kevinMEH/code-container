@@ -125,6 +125,16 @@ RUN apt-get update && apt-get install -y postgresql-client redis-tools
 - **Caution:** Project files can still be deleted by harness; always use upstream version control
 - **Caution:** Network access is still available; information may still be exfiltrated over network
 
+#### ⚠️ Security Advisory:
+- The main purpose of `container` is to protect commands like `rm` or `apt` from unintentionally affecting your system.
+  - `container` assumes that your agent is acting in good faith.
+- `container` does not protect from prompt injections or network exfiltration in the event that an agent becomes malaligned.
+  - Users are advised to not download or work with unverified software even within the container.
+  - Sensitive information inside the container may still be exfiltrated by an attacker just as with your regular system. This includes:
+    - OAuth credentials inside harness configs
+    - API keys inside harness configs
+    - SSH keys for git functionality
+
 ### Simultaneous Work
 
 You and multiple agents can work on the same project simultaneously.
