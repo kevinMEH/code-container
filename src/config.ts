@@ -31,6 +31,14 @@ const SettingsSchema = z.object({
 
 export type Settings = z.infer<typeof SettingsSchema>;
 
+export function ensureAppdataDir(): void {
+  if (!fs.existsSync(APPDATA_DIR)) {
+    fs.mkdirSync(APPDATA_DIR, { recursive: true, mode: 0o700 });
+  } else {
+    fs.chmodSync(APPDATA_DIR, 0o700);
+  }
+}
+
 export function loadSettings(): Settings {
   if (!fs.existsSync(SETTINGS_PATH)) {
     return { completedInit: false };
@@ -40,6 +48,7 @@ export function loadSettings(): Settings {
 }
 
 export function saveSettings(settings: Settings): void {
+  ensureAppdataDir();
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2), {
     mode: 0o600,
   });
@@ -69,11 +78,7 @@ export function copyConfigs(): void {
 }
 
 export function ensureConfigDir(): void {
-  if (!fs.existsSync(APPDATA_DIR)) {
-    fs.mkdirSync(APPDATA_DIR, { recursive: true, mode: 0o700 });
-  } else {
-    fs.chmodSync(APPDATA_DIR, 0o700);
-  }
+  ensureAppdataDir();
 
   if (!fs.existsSync(CONFIGS_DIR)) {
     fs.mkdirSync(CONFIGS_DIR, { recursive: true, mode: 0o700 });

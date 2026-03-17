@@ -42,11 +42,12 @@ export function buildImage(): void {
 export async function init(isStartup: boolean = false): Promise<void> {
   const settings = loadSettings();
 
-  if (!settings.completedInit) {
-    if (isStartup) {
+  if (isStartup) {
+    // If startup: Check if completedInit, if not, prompt.
+    if (!settings.completedInit) {
       printInfo("First run detected. Would you like to copy config files?");
       printInfo(
-        "This will copy ~/.claude, ~/.codex, ~/.gemini, ~/.config/opencode to ~/.code-container/configs"
+        "This will copy your OpenCode, Codex, Claude Code, & Gemini CLI configs to ~/.code-container/configs for mounting."
       );
       printInfo(
         "If you choose to not copy config files, you can still setup your harness once inside the container."
@@ -56,25 +57,31 @@ export async function init(isStartup: boolean = false): Promise<void> {
       if (shouldCopy) {
         copyConfigs();
         printSuccess("Config files copied successfully");
+      } else {
+        printInfo("Ignoring copy. Run `container init` to copy.");
       }
-    } else {
+    }
+    settings.completedInit = true;
+    saveSettings(settings);
+  } else {
+    // Else, not startup; user ran container init
+    if (!settings.completedInit) {
       printInfo("Copying config files to ~/.code-container/configs...");
       copyConfigs();
       printSuccess("Config files copied successfully");
+
+      settings.completedInit = true;
+      saveSettings(settings);
+    } else {
+      printWarning(
+        "Config files already exist. This operation will merge and overwrite existing config files."
+      );
+      const shouldCopy = await promptYesNo("Continue?");
+      if (shouldCopy) {
+        copyConfigs();
+        printSuccess("Config files copied successfully");
+      }
     }
-
-    settings.completedInit = true;
-    saveSettings(settings);
-    return;
-  }
-
-  printWarning(
-    "Init has already been run. This operation will merge and overwrite existing config files."
-  );
-  const shouldCopy = await promptYesNo("Continue?");
-  if (shouldCopy) {
-    copyConfigs();
-    printSuccess("Config files copied successfully");
   }
 }
 
@@ -113,7 +120,7 @@ export function runContainer(projectPath: string): void {
   }
 
   printInfo(`Creating new container: ${containerName}`);
-  printInfo(`Project: ${projectPath} ~/${projectName}`);
+  printInfo(`Project: ${projectPath}`);
 
   if (!createNewContainer(containerName, projectName, projectPath)) {
     printError("Failed to create container");
