@@ -1,4 +1,5 @@
 import * as path from "path";
+import * as readline from "readline";
 
 export function printInfo(message: string): void {
   console.log(`\x1b[34m[INFO]\x1b[0m ${message}`);
@@ -22,4 +23,18 @@ export function resolveProjectPath(projectPath: string | undefined): string {
   }
 
   return path.resolve(projectPath);
+}
+
+export function promptYesNo(question: string): Promise<boolean> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    rl.question(`${question} (y/n): `, (answer) => {
+      rl.close();
+      resolve(answer.toLowerCase() === "y" || answer.toLowerCase() === "yes");
+    });
+  });
 }

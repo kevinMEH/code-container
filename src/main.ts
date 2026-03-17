@@ -8,6 +8,7 @@ import {
   removeContainerForProject,
   listContainers,
   cleanContainers,
+  init,
 } from "./commands";
 
 function usage(): void {
@@ -20,6 +21,7 @@ Commands:
     (none)         Start container for current directory (default)
     run            Start container for specified project path
     build          Build the Docker image
+    init           Copy config files from home directory
     stop           Stop the container for this project
     remove         Remove the container for this project
     list           List all Code containers
@@ -32,6 +34,7 @@ Examples:
     container                           # Start container for current directory
     container run /path/to/project      # Start container for specific project
     container build                     # Build Docker image
+    container init                      # Copy config files
     container stop                      # Stop container for current directory
     container remove /path/to/project   # Remove container for specific project
     container list                      # List all containers
@@ -40,7 +43,7 @@ Examples:
   process.exit(0);
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const args = process.argv.slice(2);
   let command = "";
   let projectPath = "";
@@ -51,7 +54,15 @@ function main(): void {
       usage();
     }
 
-    const validCommands = ["run", "build", "stop", "remove", "list", "clean"];
+    const validCommands = [
+      "run",
+      "build",
+      "init",
+      "stop",
+      "remove",
+      "list",
+      "clean",
+    ];
     if (validCommands.includes(firstArg)) {
       command = firstArg;
       if (args.length > 1) {
@@ -69,18 +80,25 @@ function main(): void {
 
   if (command === "list") {
     listContainers();
-    process.exit(0);
+    return;
   }
 
   if (command === "clean") {
     cleanContainers();
-    process.exit(0);
+    return;
   }
 
   if (command === "build") {
     buildImage();
-    process.exit(0);
+    return;
   }
+
+  if (command === "init") {
+    await init();
+    return;
+  }
+
+  await init(true);
 
   const resolvedPath = resolveProjectPath(projectPath);
 

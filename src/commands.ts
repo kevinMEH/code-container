@@ -1,6 +1,12 @@
 import * as path from "path";
 import * as fs from "fs";
-import { printInfo, printSuccess, printWarning, printError } from "./utils";
+import {
+  printInfo,
+  printSuccess,
+  printWarning,
+  printError,
+  promptYesNo,
+} from "./utils";
 import {
   generateContainerName,
   imageExists,
@@ -17,7 +23,12 @@ import {
   getStoppedContainerIds,
   removeContainersById,
 } from "./docker";
-import { ensureConfigDir } from "./config";
+import {
+  ensureConfigDir,
+  loadSettings,
+  saveSettings,
+  copyConfigs,
+} from "./config";
 
 export function buildImage(): void {
   printInfo("Building Docker image: code:latest");
@@ -26,6 +37,45 @@ export function buildImage(): void {
     process.exit(1);
   }
   printSuccess("Docker image built successfully");
+}
+
+export async function init(isStartup: boolean = false): Promise<void> {
+  const settings = loadSettings();
+
+  if (!settings.completedInit) {
+    if (isStartup) {
+      printInfo("First run detected. Would you like to copy config files?");
+      printInfo(
+        "This will copy ~/.claude, ~/.codex, ~/.gemini, ~/.config/opencode to ~/.code-container/configs"
+      );
+      printInfo(
+        "If you choose to not copy config files, you can still setup your harness once inside the container."
+      );
+
+      const shouldCopy = await promptYesNo("Copy config files?");
+      if (shouldCopy) {
+        copyConfigs();
+        printSuccess("Config files copied successfully");
+      }
+    } else {
+      printInfo("Copying config files to ~/.code-container/configs...");
+      copyConfigs();
+      printSuccess("Config files copied successfully");
+    }
+
+    settings.completedInit = true;
+    saveSettings(settings);
+    return;
+  }
+
+  printWarning(
+    "Init has already been run. This operation will merge and overwrite existing config files."
+  );
+  const shouldCopy = await promptYesNo("Continue?");
+  if (shouldCopy) {
+    copyConfigs();
+    printSuccess("Config files copied successfully");
+  }
 }
 
 export function runContainer(projectPath: string): void {
