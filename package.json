@@ -8,12 +8,14 @@
   },
   "files": [
     "dist",
+    "scripts",
     "Dockerfile"
   ],
   "scripts": {
     "build": "tsc && chmod u+x dist/main.js",
     "clean": "rm -rf dist",
-    "start": "node dist/main.js"
+    "start": "node dist/main.js",
+    "postinstall": "node scripts/postinstall.js"
   },
   "keywords": [
     "docker",
