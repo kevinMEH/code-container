@@ -14,6 +14,10 @@ if (!fs.existsSync(APPDATA_DIR)) {
   fs.mkdirSync(APPDATA_DIR, { recursive: true, mode: 0o700 });
 }
 
+if (!fs.existsSync(CONFIGS_DIR)) {
+  fs.mkdirSync(CONFIGS_DIR, { recursive: true, mode: 0o700 });
+}
+
 if (!fs.existsSync(DOCKERFILE_PATH)) {
   fs.copyFileSync(PACKAGED_DOCKERFILE, DOCKERFILE_PATH);
 }
