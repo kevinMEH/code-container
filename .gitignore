@@ -1,17 +1,2 @@
 node_modules
 dist
-
-.claude/*
-.codex/*
-.opencode/*
-.gemini/*
-.local
-
-container.claude.json
-
-!.claude/.gitkeep
-!.codex/.gitkeep
-!.opencode/.gitkeep
-!.gemini/.gitkeep
-
-.dockerignore
