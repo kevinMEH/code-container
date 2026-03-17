@@ -3,15 +3,12 @@ import * as path from "path";
 import * as fs from "fs";
 import * as crypto from "crypto";
 import { printInfo, printError } from "./utils";
-import {
-  APPDATA_DIR,
-  DOCKERFILE_PATH,
-  MOUNTS_PATH,
-} from "./config";
+import { APPDATA_DIR, DOCKERFILE_PATH, MOUNTS_PATH } from "./config";
 
-const IMAGE_NAME = "code-container";
-const IMAGE_TAG = "latest";
+export const IMAGE_NAME = "code-container";
+export const IMAGE_TAG = "latest";
 const PACKAGED_DOCKERFILE = path.resolve(__dirname, "..", "Dockerfile");
+const CONTAINER_PREFIX = "container";
 
 export function checkDocker(): void {
   const result = spawnSync("docker", ["info"], { stdio: "pipe" });
@@ -31,8 +28,8 @@ function loadMounts(): string[] {
   const content = fs.readFileSync(MOUNTS_PATH, "utf-8");
   return content
     .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith("#"));
+    .map(line => line.trim())
+    .filter(line => line && !line.startsWith("#"));
 }
 
 export function getMounts(projectPath: string, projectName: string): string[] {
@@ -54,7 +51,7 @@ export function generateContainerName(projectPath: string): string {
     .update(normalizedPath)
     .digest("hex")
     .substring(0, 8);
-  return `code-${projectName}-${pathHash}`;
+  return `${CONTAINER_PREFIX}-${projectName}-${pathHash}`;
 }
 
 export function imageExists(): boolean {
@@ -208,7 +205,7 @@ export function listContainersRaw(): void {
       "ps",
       "-a",
       "--filter",
-      "name=code-",
+      `name=${CONTAINER_PREFIX}-`,
       "--format",
       "table {{.Names}}\t{{.Status}}\t{{.CreatedAt}}",
     ],
@@ -223,7 +220,7 @@ export function getStoppedContainerIds(): string[] {
       "ps",
       "-a",
       "--filter",
-      "name=code-",
+      `name=${CONTAINER_PREFIX}-`,
       "--filter",
       "status=exited",
       "--quiet",

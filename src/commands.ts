@@ -22,6 +22,8 @@ import {
   listContainersRaw,
   getStoppedContainerIds,
   removeContainersById,
+  IMAGE_NAME,
+  IMAGE_TAG,
 } from "./docker";
 import {
   ensureConfigDir,
@@ -31,7 +33,7 @@ import {
 } from "./config";
 
 export function buildImage(): void {
-  printInfo("Building Docker image: code-container:latest");
+  printInfo(`Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}`);
   if (!buildImageRaw()) {
     printError("Failed to build Docker image");
     process.exit(1);
