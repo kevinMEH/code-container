@@ -11,34 +11,20 @@
 - **Docker** — [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine
 - **A POSIX-Compatible System** — Linux, macOS, WSL
 
-### Instructions
+### Installation
 
-> [!Tip]
-> Don't want to setup manually? Ask your harness (OpenCode, Codex, CC) to setup for you.
-> ```
-> Help me setup `container`
-> ```
+On first run, `container` will prompt you to copy your AI harness configs (OpenCode, Codex, Claude Code, Gemini) from `~/` to `~/.code-container/configs` for mounting to the container. You can also run:
 
-1. **Install as Global Command**: Install the `container` command in a PATH-tracked folder:
-  ```bash
-  ln -s "$(pwd)/container.sh" /usr/local/bin/container
-  ```
+```bash
+container init
+```
 
-2. **Copy Configurations**: Copy harness configs into this repo:
-  ```bash
-  ./copy-configs.sh
-  ```
-  Or, if copying manually:
-  ```bash
-  cp -R ~/.config/opencode/ ./.opencode/  # OpenCode
-  cp -R ~/.codex/ ./.codex/               # Codex
-  cp -R ~/.claude/ ./.claude/ && cp ~/.claude.json container.claude.json  # Claude Code
-  ```
-
-3. Build Docker Image
-  ```bash
-  container --build    # Run once, or when rebuilding
-  ```
+This copies configs from:
+- `~/.config/opencode` → `~/.code-container/configs/.opencode`
+- `~/.codex` → `~/.code-container/configs/.codex`
+- `~/.claude` → `~/.code-container/configs/.claude`
+- `~/.claude.json` → `~/.code-container/configs/.claude.json`
+- `~/.gemini` → `~/.code-container/configs/.gemini`
 
 ## Usage
 
@@ -67,10 +53,13 @@ To configure your harness to run without permissions, see [Permissions.md](Permi
 
 ```bash
 container                  # Enter the container
-container --list           # List all containers
-container --stop           # Stop current project's container
-container --remove         # Remove current project's container
-container --build          # Rebuild Docker image
+container run /path/to     # Enter container for specific project
+container list             # List all containers
+container stop             # Stop current project's container
+container remove            # Remove current project's container
+container build            # Build Docker image
+container clean            # Remove all stopped containers
+container init             # Copy/recopy config files
 ```
 
 ### Customization
@@ -79,18 +68,21 @@ container --build          # Rebuild Docker image
 > Don't want to customize manually? Ask your harness to customize for you.
 > ```
 > Add the following packages to the container environment: ...
-> Add the following mount points to the container environment: ...
+> Add a custom mount point to the container environment: ...
 > ```
 
-**Add tools/packages** — Edit `Dockerfile` and rebuild:
+**Add tools/packages** — Edit `~/.code-container/Dockerfile` and rebuild:
 ```dockerfile
 RUN apt-get update && apt-get install -y postgresql-client redis-tools
 ```
 
-**Add volumes**: Edit the `docker run` command in `container.sh`:
-```bash
--v "$SCRIPT_DIR/local/path:/root/target"
+**Add mount points** — Edit `~/.code-container/MOUNTS.txt`:
 ```
+/path/on/host:/path/in/container
+/path/on/host:/path/in/container:ro
+```
+
+Each line is a mount mapping. Lines starting with `#` are ignored. Note that mounts are set at the creation of a container; to update mounts for an existing container, remove and restart.
 
 ### Persistence
 
