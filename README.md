@@ -8,14 +8,6 @@
 
 ## Quickstart
 
-> [!Note]
-> Are you still on the shell script version of `container` (container.sh)? Migrate to the NPM package by running the following:
-> ```bash
-> # TODO: Add install command
-> bash scripts/migrate.sh     # Migrate configs over to ~/.code-container/configs
-> bash scripts/cleanup.sh     # Optional: Cleanup config files
-> ```
-
 ### Prerequisites
 
 - **Docker** — [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine
@@ -25,7 +17,7 @@
 
 1. `container` is available as a NPM package. To install, simply run:
     ```bash
-    # TODO: Add install command
+    npm install -g code-container
     ```
 
 2. Then run the following to copy all your AI harness configs from `~/` to `~/.code-container/configs` for mounting onto the container.
@@ -40,6 +32,19 @@
     - `~/.gemini` → `~/.code-container/configs/.gemini`
 
 You're done 🎉; `container` is now ready to use.
+
+### Migration from `container.sh`
+
+> [!Note]
+> Are you still on the shell script version of `container`? Migrate to the NPM package by running the following:
+> ```bash
+> # Exit all containers & save important work...
+> npm install -g code-container
+> bash scripts/migrate.sh     # Migrate configs over to ~/.code-container/configs
+> bash scripts/cleanup.sh     # Optional: Cleanup config files
+> container build
+> ```
+> Note: Ensure that all work is saved and the container is ready for deletion. Containers from the previous version are not compatible with containers from the current version.
 
 ## Usage
 
@@ -132,7 +137,7 @@ You and multiple agents can work on the same project simultaneously.
 
 To uninstall `container`, uninstall the NPM package and remove `~/.code-container`:
 ```bash
-# TODO: Add uninstall command
+npm uninstall -g code-container
 rm -rf ~/.code-container
 ```
 Warning: Consider backing up the harness configurations in `~/.code-container/configs` before removing.
