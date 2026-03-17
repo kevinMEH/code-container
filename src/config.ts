@@ -7,6 +7,7 @@ export const APPDATA_DIR = path.join(os.homedir(), ".code-container");
 export const CONFIGS_DIR = path.join(APPDATA_DIR, "configs");
 export const DOCKERFILE_PATH = path.join(APPDATA_DIR, "Dockerfile");
 export const SETTINGS_PATH = path.join(APPDATA_DIR, "settings.json");
+export const MOUNTS_PATH = path.join(APPDATA_DIR, "MOUNTS.txt");
 
 export const SHARED_DIRS = [
   ".claude",
@@ -15,15 +16,6 @@ export const SHARED_DIRS = [
   ".opencode",
   ".gemini",
 ];
-
-export const MOUNT_TARGETS: Record<string, string> = {
-  ".claude": "/root/.claude",
-  ".claude.json": "/root/.claude.json",
-  ".codex": "/root/.codex",
-  ".opencode": "/root/.config/opencode",
-  ".gemini": "/root/.gemini",
-  ".local": "/root/.local",
-};
 
 const SettingsSchema = z.object({
   completedInit: z.boolean().default(false),

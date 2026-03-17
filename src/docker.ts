@@ -4,10 +4,9 @@ import * as fs from "fs";
 import * as crypto from "crypto";
 import { printInfo, printError } from "./utils";
 import {
-  CONFIGS_DIR,
   APPDATA_DIR,
   DOCKERFILE_PATH,
-  MOUNT_TARGETS,
+  MOUNTS_PATH,
 } from "./config";
 
 const IMAGE_NAME = "code";
@@ -24,18 +23,25 @@ export function checkDocker(): void {
   }
 }
 
+function loadMounts(): string[] {
+  if (!fs.existsSync(MOUNTS_PATH)) {
+    fs.writeFileSync(MOUNTS_PATH, "", { mode: 0o600 });
+    return [];
+  }
+  const content = fs.readFileSync(MOUNTS_PATH, "utf-8");
+  return content
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"));
+}
+
 export function getMounts(projectPath: string, projectName: string): string[] {
-  const home = process.env.HOME || "";
   const mounts: string[] = [];
 
   mounts.push(`${projectPath}:/root/${projectName}`);
 
-  for (const [src, target] of Object.entries(MOUNT_TARGETS)) {
-    mounts.push(`${CONFIGS_DIR}/${src}:${target}`);
-  }
-
-  mounts.push(`${home}/.gitconfig:/root/.gitconfig:ro`);
-  mounts.push(`${home}/.ssh:/root/.ssh:ro`);
+  const fileMounts = loadMounts();
+  mounts.push(...fileMounts);
 
   return mounts;
 }
