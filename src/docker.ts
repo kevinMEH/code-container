@@ -91,7 +91,7 @@ export function containerRunning(containerName: string): boolean {
 }
 
 export function stopContainer(containerName: string): void {
-  spawnSync("docker", ["stop", containerName], { stdio: "inherit" });
+  spawnSync("docker", ["stop", "--time", "3", containerName], { stdio: "inherit" });
 }
 
 export function startContainer(containerName: string): void {
