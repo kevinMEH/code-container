@@ -9,7 +9,7 @@ import {
   MOUNTS_PATH,
 } from "./config";
 
-const IMAGE_NAME = "code";
+const IMAGE_NAME = "code-container";
 const IMAGE_TAG = "latest";
 const PACKAGED_DOCKERFILE = path.resolve(__dirname, "..", "Dockerfile");
 

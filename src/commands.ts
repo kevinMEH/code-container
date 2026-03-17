@@ -31,7 +31,7 @@ import {
 } from "./config";
 
 export function buildImage(): void {
-  printInfo("Building Docker image: code:latest");
+  printInfo("Building Docker image: code-container:latest");
   if (!buildImageRaw()) {
     printError("Failed to build Docker image");
     process.exit(1);
