@@ -1,6 +1,6 @@
 # Code Container (`container`)
 
-Repo: https://github.com/kevinMEH/code-container
+Repo: https://github.com/drmikecrowe/code-container
 
 This file contains instructions for AI coding assistants on how to setup and customize `container` for users.
 
@@ -15,11 +15,11 @@ Pre-setup:
 - Read `./container.sh`
 
 Setup: Do one step at a time. Do not overload the user with instructions.
-1. Ask user to do this step: Install `container` as global command:
+1. Ask user to run the installer:
    ```bash
-   ln -s "$(pwd)/container.sh" /usr/local/bin/container
+   curl -fsSL https://raw.githubusercontent.com/drmikecrowe/code-container/main/install.sh | bash
    ```
-   Do not ask user to run with `sudo`. If insufficient permissions, find an alternative location on user's `$PATH` to link to.
+   This clones to `~/.local/share/code-container` and symlinks `container` onto their PATH. The installer is fully verbose and handles everything.
 2. Do for user: Provide a list of included packages in `Dockerfile`. Then, ask user if they would like to add more packages into container environment. If yes, see `Add Packages/Dependencies` section below.
 3. Do for user: Build Docker image:
    ```bash

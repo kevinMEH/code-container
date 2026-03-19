@@ -50,26 +50,32 @@ The original project runs containers as root via Docker and uses NVM for Node.js
 - **Podman** (preferred) or **Docker**
 - **Linux** — tested on Manjaro; should work on any systemd distro. macOS/WSL untested.
 
-### Instructions
+### Install
+
+One command — clones the repo and puts `container` on your PATH:
+```bash
+curl -fsSL https://raw.githubusercontent.com/drmikecrowe/code-container/main/install.sh | bash
+```
+
+The installer is fully verbose and shows every step. It:
+1. Clones to `~/.local/share/code-container` (or pulls latest if already installed)
+2. Symlinks `container.sh` as `container` into `~/.local/bin` (if on PATH) or `/usr/local/bin` (via sudo)
 
 > [!Tip]
-> Don't want to setup manually? Ask your harness to set up for you:
+> Don't want to install manually? Ask your AI harness to set up for you:
 > ```
 > Help me setup `container`
 > ```
 
-1. **Install as Global Command**: Install the `container` command in a PATH-tracked folder:
-  ```bash
-  ln -s "$(pwd)/container.sh" /usr/local/bin/container
-  ```
+### Build
 
-2. **Build Image**:
-  ```bash
-  container --build
-  ```
-  The image is built with your host username baked in (`--build-arg USERNAME=$USER`). Rebuild if your username changes or you update the Dockerfile.
+```bash
+container --build
+```
 
-  **Includes**: Ubuntu 24.04, Node 22, Python 3, pnpm, Claude Code, OpenCode, Codex CLI, Gemini CLI, ripgrep, fd, beads, gastown.
+The image is built with your host username baked in (`--build-arg USERNAME=$USER`). Rebuild if your username changes or you update the Dockerfile.
+
+**Includes**: Ubuntu 24.04, Node 22, Python 3, pnpm, Claude Code, OpenCode, Codex CLI, Gemini CLI, ripgrep, fd, beads, gastown.
 
 ## Usage
 
