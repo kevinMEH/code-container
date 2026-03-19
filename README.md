@@ -6,6 +6,11 @@
 
 > Inspired by [kevinMEH/code-container](https://github.com/kevinMEH/code-container). Extended significantly for rootless Podman, hardware authentication (YubiKey, 1Password), seamless Claude Code auth, and alternative AI providers.
 
+> [!WARNING]
+> **Work in progress** — this project is still evolving rapidly and the field of agentic AI security is very young. Use at your own risk.
+>
+> **Docker users:** the egress firewall and related network changes have only been tested with Podman. Behaviour on Docker may differ.
+
 ## Which Container Solution Is Right For You?
 
 Three projects solve adjacent problems — pick the one that matches your threat model and workflow:
