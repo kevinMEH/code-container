@@ -67,6 +67,14 @@ The installer is fully verbose and shows every step. It:
 > Help me setup `container`
 > ```
 
+### Uninstall
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/drmikecrowe/code-container/main/uninstall.sh | bash
+```
+
+Removes the symlink and cloned repo. Optionally removes all `code-*` containers and the `code:latest` image (prompts first).
+
 ### Build
 
 ```bash
