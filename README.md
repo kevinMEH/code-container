@@ -1,6 +1,8 @@
-# Code Container
+<p align="center">
+  <img src=".github/README/banner.png" alt="Banner" />
+</p>
 
-Isolated container environment for autonomous coding harnesses (Claude Code, OpenCode, Codex, Gemini).
+#### Code Container: Isolated container environment for autonomous coding harnesses (Claude Code, OpenCode, Codex, Gemini).
 
 > Inspired by [kevinMEH/code-container](https://github.com/kevinMEH/code-container). Extended significantly for rootless Podman, hardware authentication (YubiKey, 1Password), seamless Claude Code auth, and alternative AI providers.
 
@@ -18,56 +20,42 @@ The original project runs containers as root via Docker and uses NVM for Node.js
 - **`--network host`** — simpler networking, especially useful for local dev servers
 - **XDG-aware git config** — checks `~/.config/git` before `~/.gitconfig`
 
-## Overview
+## Quickstart
 
-- **Project isolation** — one container per project; destructive actions stay contained
-- **State persistence** — installed packages, file changes, and databases persist per container
-- **Shared resources** — npm/pip caches and Claude history shared across all projects
-- **Auth transparency** — same credentials and machine identity as your host; no login prompts
-
-## Prerequisites
+### Prerequisites
 
 - **Podman** (preferred) or **Docker**
 - **Linux** — tested on Manjaro; should work on any systemd distro. macOS/WSL untested.
 
-## Setup
+### Instructions
 
 > [!Tip]
 > Don't want to setup manually? Ask your harness to set up for you:
 > ```
-> Help me setup `container`.
+> Help me setup `container`
 > ```
 
-### 1. Install as Global Command
+1. **Install as Global Command**: Install the `container` command in a PATH-tracked folder:
+  ```bash
+  ln -s "$(pwd)/container.sh" /usr/local/bin/container
+  ```
 
-```bash
-ln -s "$(pwd)/container.sh" /usr/local/bin/container
-```
+2. **Copy Configurations**: Copy harness configs into this repo:
+  ```bash
+  ./copy-configs.sh
+  ```
 
-### 2. Configure Harnesses
+3. **Build Image**:
+  ```bash
+  container --build
+  ```
+  The image is built with your host username baked in (`--build-arg USERNAME=$USER`). Rebuild if your username changes or you update the Dockerfile.
 
-```bash
-./copy-configs.sh
-```
-
-Or manually:
-```bash
-cp -R ~/.config/opencode/ ./.opencode/
-cp -R ~/.codex/ ./.codex/
-```
-
-### 3. Build Image
-
-```bash
-container --build
-```
-
-The image is built with your host username baked in (`--build-arg USERNAME=$USER`). **Rebuild if your username changes or you update the Dockerfile.**
-
-**Includes**: Ubuntu 24.04, Node 22, Python 3, pnpm, Claude Code, OpenCode, Codex CLI, Gemini CLI, ripgrep, fd, beads, gastown.
+  **Includes**: Ubuntu 24.04, Node 22, Python 3, pnpm, Claude Code, OpenCode, Codex CLI, Gemini CLI, ripgrep, fd, beads, gastown.
 
 ## Usage
 
+Navigate to any project and run `container` to mount project and enter container.
 ```bash
 cd /path/to/project
 container                    # Enter container shell
@@ -78,8 +66,8 @@ container --zai              # Enter Claude with Z.AI/GLM models
 Inside the container:
 ```bash
 claude                       # Claude Code (already authenticated)
-opencode                     # OpenCode
-codex                        # OpenAI Codex
+opencode                     # Start OpenCode
+codex                        # Start OpenAI Codex
 npm install <package>        # Persists per container
 pip install <package>        # Persists per container
 exit                         # Stops container if last session
@@ -87,7 +75,7 @@ exit                         # Stops container if last session
 
 Session state is saved. Resuming a container picks up exactly where you left off.
 
-## Common Commands
+### Common Commands
 
 ```bash
 container                    # Enter container (current directory)
@@ -114,19 +102,7 @@ Create `~/.zai.json` on your host:
 
 Then: `container --zai`
 
-## What Persists
-
-**Per-container:**
-- Installed packages, file changes, databases, shell history
-
-**Shared across all projects:**
-- Claude Code config, credentials, and conversation history (`~/.claude/`)
-- npm and pip download caches
-
-**Read-only from host:**
-- SSH keys, git config, GPG keys
-
-## Customization
+### Customization
 
 **Add packages** — edit `Dockerfile` and rebuild:
 ```dockerfile
@@ -139,6 +115,20 @@ RUN apt-get update && apt-get install -y postgresql-client
 ```
 
 No rebuild needed for mount changes; just remove and relaunch the container.
+
+### Persistence
+
+- **Per-Container**: Packages, file changes, databases, shell history
+- **Shared Across Projects**: Claude Code config/credentials/history, npm/pip caches
+- **Read-only from Host**: Git config, SSH keys, GPG keys
+
+### Simultaneous Work
+
+You and your harness can work on the same project simultaneously.
+
+- **Safe**: Reading files, editing files, most development operations
+- **Avoid**: Simultaneous Git operations from both sides, installing conflicting `node_modules`
+- **Recommended Workflow**: Let your harness run autonomously in the container while you work; review changes and commit.
 
 ## Security
 
