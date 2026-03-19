@@ -80,6 +80,32 @@ start_new_container() {
         optional_args="$optional_args -v $zai_config:$CONTAINER_HOME/.zai.json:ro"
     fi
 
+    # Tool config directories — mount ~/.config/<name> for each tool in extra-tools.txt
+    # Some tools use a config dir name that differs from their mise/package name.
+    local -A tool_config_name_map=(
+        [neovim]=nvim
+        [markdownlint-cli2]=""   # no ~/.config dir
+        [ast-grep]=""            # no ~/.config dir
+    )
+    local tools_file="$SCRIPT_DIR/extra-tools.txt"
+    if [ -f "$tools_file" ]; then
+        while IFS= read -r tool; do
+            # Strip npm:/github: prefixes, comments, blank lines
+            tool=$(echo "$tool" | sed 's|^npm:||; s|^github:[^@]*/||' | awk '{print $1}')
+            [ -z "$tool" ] && continue
+            # Apply name mapping if present; empty string means skip
+            local cfg_name="$tool"
+            if [[ -v tool_config_name_map[$tool] ]]; then
+                cfg_name="${tool_config_name_map[$tool]}"
+                [ -z "$cfg_name" ] && continue
+            fi
+            local tool_cfg="$HOME/.config/$cfg_name"
+            if [ -d "$tool_cfg" ]; then
+                optional_args="$optional_args -v $tool_cfg:$CONTAINER_HOME/.config/$cfg_name"
+            fi
+        done < <(grep -v '^\s*#' "$tools_file" | grep -v '^\s*$')
+    fi
+
     # Git config (XDG or legacy location)
     if [ -d "$HOME/.config/git" ]; then
         optional_args="$optional_args -v $HOME/.config/git:$CONTAINER_HOME/.config/git:ro"

@@ -58,18 +58,40 @@ if [ -n "$HOST_GW" ]; then
     iptables -A OUTPUT -d "$HOST_GW" -j ACCEPT
 fi
 
-# Resolve each whitelisted domain and allow its current IPs
+# Detect ip6tables availability
+HAS_IP6TABLES=false
+command -v ip6tables >/dev/null 2>&1 && ip6tables -L OUTPUT >/dev/null 2>&1 && HAS_IP6TABLES=true
+
+if [ "$HAS_IP6TABLES" = "true" ]; then
+    ip6tables -F OUTPUT
+    ip6tables -P OUTPUT DROP
+    ip6tables -A OUTPUT -o lo -j ACCEPT
+    ip6tables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+    ip6tables -A OUTPUT -p udp --dport 53 -j ACCEPT
+    ip6tables -A OUTPUT -p tcp --dport 53 -j ACCEPT
+fi
+
+# Resolve each whitelisted domain and allow its current IPs (IPv4 via iptables, IPv6 via ip6tables)
 allowed_ips=0
 failed=()
 for domain in "${WHITELIST[@]}"; do
-    ips=$(getent hosts "$domain" 2>/dev/null | awk '{print $1}' | sort -u)
+    ips=$(getent ahosts "$domain" 2>/dev/null | awk '{print $1}' | sort -u)
     if [ -z "$ips" ]; then
         failed+=("$domain")
         continue
     fi
     for ip in $ips; do
-        iptables -A OUTPUT -d "$ip" -j ACCEPT
-        allowed_ips=$((allowed_ips + 1))
+        if [[ "$ip" == *:* ]]; then
+            # IPv6 address
+            if [ "$HAS_IP6TABLES" = "true" ]; then
+                ip6tables -A OUTPUT -d "$ip" -j ACCEPT
+                allowed_ips=$((allowed_ips + 1))
+            fi
+        else
+            # IPv4 address
+            iptables -A OUTPUT -d "$ip" -j ACCEPT
+            allowed_ips=$((allowed_ips + 1))
+        fi
     done
 done
 
@@ -78,3 +100,4 @@ touch /run/egress-firewall-active
 
 echo "[firewall] Egress active: $allowed_ips IPs across ${#WHITELIST[@]} domains"
 [ ${#failed[@]} -gt 0 ] && echo "[firewall] Warning: could not resolve: ${failed[*]}"
+exit 0
