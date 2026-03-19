@@ -20,6 +20,7 @@ done
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 IMAGE_NAME="code"
 IMAGE_TAG="latest"
+CONTAINER_HOME="/container/$USER"
 
 # Detect container runtime (prefer podman)
 if command -v podman >/dev/null 2>&1; then
@@ -34,7 +35,7 @@ fi
 # Container launch command; modify to add additional mounts
 start_new_container() {
     local container_name="$1"
-    local project_name="$2"
+    local project_relpath="$2"
     local project_path="$3"
 
     # Build optional mounts conditionally
@@ -43,23 +44,23 @@ start_new_container() {
     # 1Password SSH agent socket
     local op_agent="$HOME/.1password/agent.sock"
     if [ -S "$op_agent" ]; then
-        optional_args="$optional_args -v $op_agent:/home/ubuntu/.1password/agent.sock"
-        optional_args="$optional_args -e SSH_AUTH_SOCK=/home/ubuntu/.1password/agent.sock"
+        optional_args="$optional_args -v $op_agent:$CONTAINER_HOME/.1password/agent.sock"
+        optional_args="$optional_args -e SSH_AUTH_SOCK=$CONTAINER_HOME/.1password/agent.sock"
     fi
 
     # GPG agent SSH socket (for YubiKey SSH auth)
     local gpg_ssh_socket="/run/user/$(id -u)/gnupg/S.gpg-agent.ssh"
     if [ -S "$gpg_ssh_socket" ]; then
-        optional_args="$optional_args -v $gpg_ssh_socket:/home/ubuntu/.gnupg-sockets/S.gpg-agent.ssh"
+        optional_args="$optional_args -v $gpg_ssh_socket:$CONTAINER_HOME/.gnupg-sockets/S.gpg-agent.ssh"
         # Only set SSH_AUTH_SOCK if 1Password agent isn't already set
         if [ ! -S "$op_agent" ]; then
-            optional_args="$optional_args -e SSH_AUTH_SOCK=/home/ubuntu/.gnupg-sockets/S.gpg-agent.ssh"
+            optional_args="$optional_args -e SSH_AUTH_SOCK=$CONTAINER_HOME/.gnupg-sockets/S.gpg-agent.ssh"
         fi
     fi
 
     # GPG configuration (for YubiKey)
     if [ -d "$HOME/.gnupg" ]; then
-        optional_args="$optional_args -v $HOME/.gnupg:/home/ubuntu/.gnupg:ro"
+        optional_args="$optional_args -v $HOME/.gnupg:$CONTAINER_HOME/.gnupg:ro"
     fi
 
     # YubiKey USB device passthrough (Yubico vendor ID: 1050)
@@ -75,41 +76,42 @@ start_new_container() {
     # Z.AI config for GLM models
     local zai_config="$HOME/.zai.json"
     if [ -f "$zai_config" ]; then
-        optional_args="$optional_args -v $zai_config:/home/ubuntu/.zai.json:ro"
+        optional_args="$optional_args -v $zai_config:$CONTAINER_HOME/.zai.json:ro"
     fi
 
     # Git config (XDG or legacy location)
     if [ -d "$HOME/.config/git" ]; then
-        optional_args="$optional_args -v $HOME/.config/git:/home/ubuntu/.config/git:ro"
+        optional_args="$optional_args -v $HOME/.config/git:$CONTAINER_HOME/.config/git:ro"
     elif [ -f "$HOME/.gitconfig" ]; then
-        optional_args="$optional_args -v $HOME/.gitconfig:/home/ubuntu/.gitconfig:ro"
+        optional_args="$optional_args -v $HOME/.gitconfig:$CONTAINER_HOME/.gitconfig:ro"
     fi
 
-    # Claude Code config - mount only safe files, not credentials
-    local claude_configs=""
-    if [ -f "$HOME/.claude/settings.json" ]; then
-        claude_configs="$claude_configs -v $HOME/.claude/settings.json:/home/ubuntu/.claude/settings.json:ro"
+    # Host machine ID - makes Claude Code think it's running on the same machine (avoids re-auth)
+    if [ -f /etc/machine-id ]; then
+        optional_args="$optional_args -v /etc/machine-id:/etc/machine-id:ro"
     fi
-    for dir in commands hooks skills agents; do
-        if [ -d "$HOME/.claude/$dir" ]; then
-            claude_configs="$claude_configs -v $HOME/.claude/$dir:/home/ubuntu/.claude/$dir:ro"
-        fi
-    done
+
+    # Claude Code config - mount entire directory for full auth + config sharing
+    mkdir -p "$HOME/.claude"
+    local claude_configs="-v $HOME/.claude:$CONTAINER_HOME/.claude:rw"
+    if [ -f "$HOME/.claude.json" ]; then
+        claude_configs="$claude_configs -v $HOME/.claude.json:$CONTAINER_HOME/.claude.json:rw"
+    fi
 
     $CONTAINER_RUNTIME run -d \
         --name "$container_name" \
         --userns=keep-id \
         --network host \
         -e TERM=xterm-256color \
-        -w "/home/ubuntu/$project_name" \
-        -v "$project_path:/home/ubuntu/$project_name" \
+        -w "$CONTAINER_HOME/$project_relpath" \
+        -v "$project_path:$CONTAINER_HOME/$project_relpath" \
         $claude_configs \
-        -v "$SCRIPT_DIR/.codex:/home/ubuntu/.codex" \
-        -v "$SCRIPT_DIR/.opencode:/home/ubuntu/.config/opencode" \
-        -v "$SCRIPT_DIR/.gemini:/home/ubuntu/.gemini" \
-        -v "$SCRIPT_DIR/.npm:/home/ubuntu/.npm" \
-        -v "$SCRIPT_DIR/pip:/home/ubuntu/.cache/pip" \
-        -v "$HOME/.ssh:/home/ubuntu/.ssh:ro" \
+        -v "$SCRIPT_DIR/.codex:$CONTAINER_HOME/.codex" \
+        -v "$SCRIPT_DIR/.opencode:$CONTAINER_HOME/.config/opencode" \
+        -v "$SCRIPT_DIR/.gemini:$CONTAINER_HOME/.gemini" \
+        -v "$SCRIPT_DIR/.npm:$CONTAINER_HOME/.npm" \
+        -v "$SCRIPT_DIR/pip:$CONTAINER_HOME/.cache/pip" \
+        -v "$HOME/.ssh:$CONTAINER_HOME/.ssh:ro" \
         $optional_args \
         "${IMAGE_NAME}:${IMAGE_TAG}" \
         sleep infinity
@@ -196,7 +198,7 @@ build_image() {
     print_info "Building container image: ${IMAGE_NAME}:${IMAGE_TAG}"
 
     # Build the image
-    $CONTAINER_RUNTIME build -t "${IMAGE_NAME}:${IMAGE_TAG}" "$SCRIPT_DIR"
+    $CONTAINER_RUNTIME build -t "${IMAGE_NAME}:${IMAGE_TAG}" --build-arg USERNAME="$USER" "$SCRIPT_DIR"
 
     print_success "Container image built successfully"
 }
@@ -219,16 +221,17 @@ stop_container_if_last_session() {
     local project_name="$2"
     local other_sessions
 
-    other_sessions=$(ps ax -o command= | awk -v name="$container_name" -v proj="$project_name" -v runtime="$CONTAINER_RUNTIME" '
+    other_sessions=$(ps ax -o command= | awk -v name="$container_name" -v proj="$project_name" -v runtime="$CONTAINER_RUNTIME" -v chome="$CONTAINER_HOME" '
         BEGIN { count=0 }
         {
             is_exec = (index($0, runtime " exec") && index($0, "-it") && index($0, name) && index($0, "/bin/bash"))
-            if (is_exec && index($0, "-w /home/ubuntu/" proj)) { count++ }
+            if (is_exec && index($0, "-w " chome "/" proj)) { count++ }
         }
         END { print count }
     ')
     if [ "$other_sessions" -eq 0 ]; then
-        $CONTAINER_RUNTIME stop -t 0 "$container_name"
+        $CONTAINER_RUNTIME stop -t 0 "$container_name" &>/dev/null &
+        disown
     else
         print_info "Skipping stop; $other_sessions other terminal(s) still attached"
     fi
@@ -240,7 +243,15 @@ start_container() {
     local use_claude="${2:-false}"
     local use_zai="${3:-false}"
     local container_name=$(generate_container_name "$project_path")
-    local project_name=$(basename "$project_path")
+    # Use relative path for consistent session storage across /home and /data
+    local project_relpath
+    if [[ "$project_path" == "$HOME/"* ]]; then
+        project_relpath="${project_path#$HOME/}"
+    elif [[ "$project_path" == "/data/$USER/"* ]]; then
+        project_relpath="${project_path#/data/$USER/}"
+    else
+        project_relpath=$(basename "$project_path")
+    fi
 
     # Validate project path
     if [ ! -d "$project_path" ]; then
@@ -249,7 +260,6 @@ start_container() {
     fi
 
     # Create shared directories if they don't exist
-    mkdir -p "$SCRIPT_DIR/.claude"
     mkdir -p "$SCRIPT_DIR/.codex"
     mkdir -p "$SCRIPT_DIR/.npm"
     mkdir -p "$SCRIPT_DIR/pip"
@@ -271,6 +281,7 @@ start_container() {
     # Determine the command to run
     local exec_cmd="/bin/bash"
     local exec_env="-e TERM=xterm-256color"
+    local mise_init="source ~/.bashrc && mise trust -a 2>/dev/null"
 
     # --claude flag: start regular claude in YOLO mode
     if [ "$use_claude" = "true" ]; then
@@ -320,8 +331,8 @@ start_container() {
     if container_running "$container_name"; then
         print_info "Container '$container_name' is already running"
         print_info "Attaching to container..."
-        $CONTAINER_RUNTIME exec -it $exec_env -w "/home/ubuntu/$project_name" "$container_name" bash -l -c "$exec_cmd"
-        stop_container_if_last_session "$container_name" "$project_name"
+        $CONTAINER_RUNTIME exec -it $exec_env -w "$CONTAINER_HOME/$project_relpath" "$container_name" bash -l -c "$mise_init && $exec_cmd"
+        stop_container_if_last_session "$container_name" "$project_relpath"
         return
     fi
 
@@ -329,20 +340,20 @@ start_container() {
     if container_exists "$container_name"; then
         print_info "Starting existing container: $container_name"
         $CONTAINER_RUNTIME start "$container_name"
-        $CONTAINER_RUNTIME exec -it $exec_env -w "/home/ubuntu/$project_name" "$container_name" bash -l -c "$exec_cmd"
-        stop_container_if_last_session "$container_name" "$project_name"
+        $CONTAINER_RUNTIME exec -it $exec_env -w "$CONTAINER_HOME/$project_relpath" "$container_name" bash -l -c "$mise_init && $exec_cmd"
+        stop_container_if_last_session "$container_name" "$project_relpath"
         return
     fi
 
     # Create and start new container
     print_info "Creating new container: $container_name"
-    print_info "Project: $project_path -> ~/$(basename "$project_path")"
+    print_info "Project: $project_path -> ~/$project_relpath"
 
-    start_new_container "$container_name" "$project_name" "$project_path"
+    start_new_container "$container_name" "$project_relpath" "$project_path"
 
-    $CONTAINER_RUNTIME exec -it $exec_env -w "/home/ubuntu/$project_name" "$container_name" bash -l -c "$exec_cmd"
+    $CONTAINER_RUNTIME exec -it $exec_env -w "$CONTAINER_HOME/$project_relpath" "$container_name" bash -l -c "$mise_init && $exec_cmd"
 
-    stop_container_if_last_session "$container_name" "$project_name"
+    stop_container_if_last_session "$container_name" "$project_relpath"
 
     print_success "Container session ended"
 }

@@ -22,15 +22,32 @@ RUN apt-get update && apt-get install -y \
     zlib1g-dev \
     libffi-dev \
     vim \
-    tree
+    tree \
+    gnupg
 
-# Use existing ubuntu user (UID 1000)
-USER ubuntu
-WORKDIR /home/ubuntu
+# Install 1Password CLI and desktop app (for SSH signing with op-ssh-sign)
+RUN curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
+    gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/$(dpkg --print-architecture) stable main" | \
+    tee /etc/apt/sources.list.d/1password.list && \
+    apt-get update && apt-get install -y 1password 1password-cli && \
+    rm -rf /var/lib/apt/lists/*
+
+# Accept build-time username (defaults to ubuntu)
+ARG USERNAME=ubuntu
+
+# Rename ubuntu user and move home to /container/$USERNAME
+RUN mkdir -p /container && \
+    usermod -l ${USERNAME} ubuntu && \
+    groupmod -n ${USERNAME} ubuntu && \
+    usermod -d /container/${USERNAME} -m ${USERNAME}
+
+USER ${USERNAME}
+WORKDIR /container/${USERNAME}
 
 # Install mise (modern runtime manager)
 RUN curl -fsSL https://mise.run | bash
-ENV PATH="/home/ubuntu/.local/share/mise/shims:/home/ubuntu/.local/bin:${PATH}"
+ENV PATH="/container/${USERNAME}/.local/share/mise/shims:/container/${USERNAME}/.local/bin:${PATH}"
 
 # Configure mise tools
 RUN mise settings set experimental true && \
@@ -52,12 +69,12 @@ RUN mise settings set experimental true && \
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Configure bash prompt to show container name
-RUN echo 'PS1="\[\033[01;32m\][code-container]\[\033[00m\] \[\033[01;34m\]\w\[\033[00m\]\$ "' >> /home/ubuntu/.bashrc
+RUN echo 'PS1="\[\033[01;32m\][code-container]\[\033[00m\] \[\033[01;34m\]\w\[\033[00m\]\$ "' >> /container/${USERNAME}/.bashrc
 
 # Source mise in bashrc for interactive shells
-RUN echo 'eval "$(mise activate bash)"' >> /home/ubuntu/.bashrc && \
-    echo 'mise trust -a 2>/dev/null' >> /home/ubuntu/.bashrc && \
-    echo 'mise up 2>/dev/null' >> /home/ubuntu/.bashrc
+RUN echo 'eval "$(mise activate bash)"' >> /container/${USERNAME}/.bashrc && \
+    echo 'mise trust -a 2>/dev/null' >> /container/${USERNAME}/.bashrc && \
+    echo 'mise up 2>/dev/null' >> /container/${USERNAME}/.bashrc
 
 # Default command: bash shell
 CMD ["/bin/bash"]

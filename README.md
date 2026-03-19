@@ -1,150 +1,152 @@
 # Code Container
 
-Code Container: Isolated Docker environment for your autonomous coding harness.
+Isolated container environment for autonomous coding harnesses (Claude Code, OpenCode, Codex, Gemini).
+
+> Inspired by [kevinMEH/code-container](https://github.com/kevinMEH/code-container). Extended significantly for rootless Podman, hardware authentication (YubiKey, 1Password), seamless Claude Code auth, and alternative AI providers.
+
+## What's Different From Upstream
+
+The original project runs containers as root via Docker and uses NVM for Node.js. This fork needed:
+
+- **Podman (rootless) support** — prefers Podman, falls back to Docker; uses `--userns=keep-id` so file ownership works correctly without running as root
+- **Host username in container** — the container user matches your host username (build-time `ARG`), with home at `/container/$USER` to distinguish container sessions from host sessions
+- **Seamless Claude Code auth** — mounts `/etc/machine-id`, `~/.claude/`, and `~/.claude.json` so Claude Code sees the same machine identity and credentials as the host; no re-authentication needed
+- **Hardware auth passthrough** — 1Password SSH agent socket, GPG agent socket (for YubiKey SSH), GPG config, and YubiKey USB device passthrough
+- **mise instead of NVM** — manages Node, Python, pnpm, ripgrep, fd, and all CLI tools from a single config; installed tools include opencode, codex, gemini-cli, beads, gastown
+- **`--claude` / `--zai` flags** — launch directly into Claude Code (YOLO mode) or Claude with a Z.AI/GLM endpoint
+- **Non-blocking exit** — container stop runs in the background so your terminal returns immediately
+- **`--network host`** — simpler networking, especially useful for local dev servers
+- **XDG-aware git config** — checks `~/.config/git` before `~/.gitconfig`
 
 ## Overview
 
-- **Project Isolation**: One container per project with complete isolation
-- **State Persistence**: All changes and packages persist between sessions
-- **Shared Resources**: npm cache, pip cache, and Claude history shared across projects
-- **Security**: Changes within a container don't affect your host or other projects
+- **Project isolation** — one container per project; destructive actions stay contained
+- **State persistence** — installed packages, file changes, and databases persist per container
+- **Shared resources** — npm/pip caches and Claude history shared across all projects
+- **Auth transparency** — same credentials and machine identity as your host; no login prompts
 
 ## Prerequisites
 
-- **Docker** — [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine
-- **A POSIX-Compatible System** — Linux, macOS, WSL
+- **Podman** (preferred) or **Docker**
+- **Linux** — tested on Manjaro; should work on any systemd distro. macOS/WSL untested.
 
 ## Setup
 
 > [!Tip]
-> Don't want to setup manually? Ask your harness (OpenCode, Codex, CC) to setup for you.
+> Don't want to setup manually? Ask your harness to set up for you:
 > ```
 > Help me setup `container`.
 > ```
 
 ### 1. Install as Global Command
 
-To use the `container` command from anywhere, create a symlink in a PATH-tracked folder:
 ```bash
 ln -s "$(pwd)/container.sh" /usr/local/bin/container
 ```
 
 ### 2. Configure Harnesses
 
-Copy configurations into this repo (shared across all containers):
 ```bash
-# Script to copy harness configs
 ./copy-configs.sh
 ```
 
-Or, if copying manually:
+Or manually:
 ```bash
-# OpenCode
 cp -R ~/.config/opencode/ ./.opencode/
-# Codex
 cp -R ~/.codex/ ./.codex/
-# Claude Code
-cp -R ~/.claude/ ./.claude/ && cp ~/.claude.json container.claude.json
 ```
 
-### 3. Build Docker Image
+### 3. Build Image
 
 ```bash
-container --build    # Run once, or when rebuilding
+container --build
 ```
 
-**Includes**: Ubuntu 24.04 LTS, Node.js 22 LTS, Python 3, Claude Code, OpenCode, OpenAI Codex CLI, git. Add other tools by modifying the `Dockerfile`.
+The image is built with your host username baked in (`--build-arg USERNAME=$USER`). **Rebuild if your username changes or you update the Dockerfile.**
 
-## Primary Usage
+**Includes**: Ubuntu 24.04, Node 22, Python 3, pnpm, Claude Code, OpenCode, Codex CLI, Gemini CLI, ripgrep, fd, beads, gastown.
 
-Navigate to any project and run `container` to mount the project and open the container.
+## Usage
+
 ```bash
-cd /path/to/your/project
-container                    # Enter container
+cd /path/to/project
+container                    # Enter container shell
+container --claude           # Enter directly into Claude Code (YOLO mode)
+container --zai              # Enter Claude with Z.AI/GLM models
 ```
 
-Inside the container: Start your harness and develop like normal.
+Inside the container:
 ```bash
-opencode                     # Start OpenCode
-codex                        # Start OpenAI Codex
+claude                       # Claude Code (already authenticated)
+opencode                     # OpenCode
+codex                        # OpenAI Codex
 npm install <package>        # Persists per container
 pip install <package>        # Persists per container
-exit                         # Auto-stops container on exit
+exit                         # Stops container if last session
 ```
 
-Container state is saved. Next invocation resumes where you left off. AI conversations and settings persist across all projects.
-
-### Container Isolation
-
-Destructive actions are localized inside containers. You can let your harness run with full permissions.
-
-To configure your harness to run without permissions, see [Permissions.md](Permissions.md) for instructions.
+Session state is saved. Resuming a container picks up exactly where you left off.
 
 ## Common Commands
 
 ```bash
-container                  # Enter the container
-container --list           # List all containers
-container --stop           # Stop current project's container
-container --remove         # Remove current project's container
-container --build          # Rebuild Docker image
-
-# With an explicit path:
-container /path/to/project
-container --stop /path/to/project
-container --remove /path/to/project
+container                    # Enter container (current directory)
+container /path/to/project   # Enter container for a specific project
+container --build            # Rebuild image (e.g. after Dockerfile changes)
+container --list             # List all containers
+container --stop             # Stop current project's container
+container --remove           # Remove current project's container
+container --clean            # Remove all stopped containers
 ```
+
+## Z.AI / GLM Models
+
+Create `~/.zai.json` on your host:
+```json
+{
+  "apiUrl": "https://your-endpoint",
+  "apiKey": "your-key",
+  "haikuModel": "glm-4.5-air",
+  "sonnetModel": "glm-5.0",
+  "opusModel": "glm-5.0"
+}
+```
+
+Then: `container --zai`
 
 ## What Persists
 
-**Per-Container**:
-- All installed system packages, npm packages, Python packages
-- All file modifications, databases, shell history
-- Container filesystem state
+**Per-container:**
+- Installed packages, file changes, databases, shell history
 
-**Shared Across All Projects:**
-- Harness configuration and conversation history
+**Shared across all projects:**
+- Claude Code config, credentials, and conversation history (`~/.claude/`)
 - npm and pip download caches
-- Python user packages
 
-**Read-only from Host:**
-- Git configuration, SSH keys
-
-## Simultaneous Work
-
-You and your harness can work on the same project simultaneously.
-
-**Safe**: Reading files, editing files, most development operations
-
-**Avoid**: Simultaneous Git operations from both sides, installing conflicting `node_modules`
-
-**Recommended Workflow**: Let your harness run autonomously in the container while you work; review changes and commit.
+**Read-only from host:**
+- SSH keys, git config, GPG keys
 
 ## Customization
 
-> [!Tip]
-> Don't want to customize manually? Ask your harness to customize for you.
-> ```
-> Add the following packages to the container environment: ...
-> Add the following mount points to the container environment: ...
-> ```
-
-**Add tools/packages** — Edit `Dockerfile` and rebuild:
+**Add packages** — edit `Dockerfile` and rebuild:
 ```dockerfile
-RUN apt-get update && apt-get install -y postgresql-client redis-tools
+RUN apt-get update && apt-get install -y postgresql-client
 ```
 
-**Add shared volumes (caches, config, etc.)** — Edit the `docker run -it` command in `container.sh`:
+**Add mount points** — edit `start_new_container()` in `container.sh`:
 ```bash
--v "$SCRIPT_DIR/new-shared-dir:/root/target-path"
+-v "$HOME/.config/something:/container/$USER/.config/something:ro"
 ```
+
+No rebuild needed for mount changes; just remove and relaunch the container.
 
 ## Security
 
-- SSH keys and Git config mounted read-only
-- Project isolation prevents cross-contamination across containers
-- Host filesystem protected (access limited to mounted directories)
+- Containers run rootless (`--userns=keep-id`) — no host root access
+- SSH keys and git config mounted read-only
+- Project isolation prevents cross-contamination
+- Host filesystem access limited to explicitly mounted directories
 
 **Limitations:**
-- Network access still available; information may still be exfiltrated over network
-- Project files can still be deleted by harness; always use upstream version control
+- Network access is unrestricted (`--network host`); data can still be exfiltrated
+- Project files can be deleted by the harness; use version control
