@@ -12,6 +12,7 @@ import {
 } from "./commands";
 import { checkDocker } from "./docker";
 import { loadSettings, saveSettings } from "./config";
+import { ensureMountsFile } from "./mounts";
 
 const TOS = `
 \x1b[33m⚠️  Security Advisory:\x1b[0m
@@ -125,6 +126,8 @@ async function main(): Promise<void> {
     printInfo("Terms not accepted. Exiting...");
     process.exit(1);
   }
+
+  await ensureMountsFile();
 
   if (command === "init") {
     await init();
