@@ -1,55 +1,88 @@
-# Code Container (`container`)
+**Important: Role Identification:** Identify whether your user is a **developer** or a **consumer**.
 
-Repo: https://github.com/kevinMEH/code-container
+If your user asks questions like:
+- Help me setup `container` / code-container / this project
+- Please configure all my container harnesses to run without permissions.
+- Add the following packages to the container environment: ...
+- Add the following Docker flags to the container environment: ...
+- Add a custom mount point to the container environment: ...
+- Other questions relating to using `container`
 
-This file contains instructions for AI coding assistants on how to setup and customize `container` on behalf of users.
+Then your user is a **consumer**.
+- The user is seeking your assistance in helping them setup or configure this project.
+- Next step: **Read `internal/ConsumerGuide.md`** and assist the user in installing or configurating `container`.
 
-Note: You are not allowed to run the `container` command as it will bring up an interactive Docker shell; you will thus get stuck as you won't be able to exit the shell. It is meant for user consumption only.
+If your user is a developer, proceed like normal.
 
-## Setup Instructions
+---
 
-If the user asks you to setup `container`, follow the following steps.
+# Developer Overview
 
-Pre-setup:
-- Read `./README.md`
+**code-container** (`container`) creates isolated Docker environments for AI coding harnesses (Claude Code, OpenCode, Codex CLI, Gemini CLI).
 
-Setup: Do for the user, one step at a time.
-1. Install `container` as NPM package:
-   ```bash
-   npm install -g code-container
-   ```
-2. After run, `container init` to copy the user's harness configs over.
-   ```bash
-   container init
-   ```
-3. Setup is done. Now, read `~/.code-container/Dockerfile`, which is the default packaged Dockerfile. Provide a brief list of included packages to the user. Then, ask user if they would like to add more packages into container environment. If yes, see `Add Packages/Dependencies` section below.
-4. Build the Docker image for the user. Before you build, tell the user that building the image may take up to 5 minutes.
-   ```bash
-   container build
-   ```
+## Purpose
 
-Post-setup:
-1. Provide instructions on how to use container:
-   ```
-   cd /path/to/project
-   container
-   opencode # OR: codex OR: claude
-   ```
-2. Give users a quick overview of common commands.
-   ```bash
-   container                  # Enter the container
-   container build            # Build Docker image
-   container init             # Copy/recopy config files
-   container list             # List all containers
-   container stop             # Stop current project's container
-   container remove            # Remove current project's container
-   container clean            # Remove all stopped containers
-   ```
-3. Ask users if they would like to customize local harness permissions to disable permission prompts. If yes, see `Harness Permissions` below.
+- Protect host filesystem from destructive agent actions
+- Project isolation (each project gets its own container)
+- Persistent container state across sessions
+- Shared harness configs across all projects
+
+## Key Features
+
+- **Security**: Destructive operations localized to containers
+- **Customization**: Add packages via `~/.code-container/Dockerfile`, mounts via `MOUNTS.txt`, flags via `DOCKER_FLAGS.txt`
+- **Simultaneous Work**: Multiple agents can work on same project safely
+- **Persistence**: Container state and harness configs persist
+
+## Requirements
+
+- Docker (Desktop or Engine)
+- POSIX system (Linux, macOS, WSL)
+
+---
+
+# Project Index
+
+**Important Rule: Always update this index after creating new code files or making significant changes to existing files.**
+
+## Directory Structure
+
+```
+/root/code-container/
+├── src/                    # TypeScript source code (main codebase)
+├── scripts/                # Utility scripts (install, migrate, cleanup)
+├── internal/               # Internal documentation
+├── dist/                   # Compiled JavaScript output (generated)
+├── .github/workflows/      # CI/CD workflows
+├── Dockerfile              # Container image definition
+├── package.json            # NPM package manifest
+└── tsconfig.json           # TypeScript configuration
+```
+
+## Source Files Index (`src/`)
+
+### Entry Point
+
+- `src/main.ts` — CLI entry point. Parses arguments, displays TOS, routes to commands. Supports: `run`, `build`, `init`, `stop`, `remove`, `list`, `clean`.
+
+### Core Modules
+
+- `src/commands.ts` — Business logic for all CLI commands. Image building, container lifecycle, listing, cleaning. Exports: `buildImage`, `init`, `runContainer`, `stopContainerForProject`, `removeContainerForProject`, `listContainers`, `cleanContainers`
+- `src/docker.ts` — Low-level Docker CLI wrappers. Image/container operations, interactive sessions, naming via SHA1 hash. Exports: `checkDocker`, `imageExists`, `buildImageRaw`, `containerExists`, `containerRunning`, `createNewContainer`, `execInteractive`, `stopContainer`, `startContainer`, `removeContainer`, `generateContainerName`
+- `src/config.ts` — Configuration paths and settings persistence. Manages `~/.code-container/` directory. Exports: `APPDATA_DIR`, `CONFIGS_DIR`, `DOCKERFILE_PATH`, `SETTINGS_PATH`, `MOUNTS_PATH`, `FLAGS_PATH`, `loadSettings`, `saveSettings`, `copyConfigs`, `ensureConfigDir`
+- `src/mounts.ts` — Volume mount management. Core mounts (configs, gitconfig) and optional SSH mounting. Exports: `ensureMountsFile`, `loadMounts`, `getCoreMounts`
+- `src/flags.ts` — Custom Docker flags loader from `DOCKER_FLAGS.txt`. Uses shell-quote for safe parsing. Exports: `loadFlags`
+- `src/utils.ts` — Colored console output and user prompts. Exports: `printInfo`, `printSuccess`, `printWarning`, `printError`, `promptYesNo`, `resolveProjectPath`
+
+## Scripts Index (`scripts/`)
+
+- `scripts/postinstall.js` — NPM post-install hook. Creates `~/.code-container/` structure and copies default Dockerfile.
+- `scripts/migrate.sh` — Migrates config files from old shell script location to new `~/.code-container/configs/`.
+- `scripts/cleanup.sh` — Removes old config files from project root after migration.
 
 ## Storage Structure
 
-All container data is stored in `~/.code-container/`:
+All user data stored in `~/.code-container/`:
 
 ```
 ~/.code-container/
@@ -66,66 +99,12 @@ All container data is stored in `~/.code-container/`:
 └── settings.json     # Internal settings
 ```
 
-## Customization
+## CLI Commands
 
-### Add Packages/Dependencies (Dockerfile)
-
-Add new tools by extending the RUN commands in `~/.code-container/Dockerfile`:
-
-```dockerfile
-# System packages (Ubuntu/Debian)
-RUN apt-get update && apt-get install -y \
-    postgresql-client \
-    redis-tools
-
-# Global npm packages
-RUN npm install -g typescript
-
-# Global pip packages
-RUN pip install requests pandas
-```
-
-**After modifying:**
-- Run `container build` to rebuild.
-
-### Add Mount Points (MOUNTS.txt)
-
-Add shared volumes by editing `~/.code-container/MOUNTS.txt`:
-
-```
-# Shared directory (persists across containers, readable, writable)
-/absolute/path/on/host:/root/target-path
-
-# Read-only mount from host
-/absolute/path/on/host:/root/target-path:ro
-```
-
-**After modifying:** No rebuild needed. However, mounts will only be applied to new containers. Inform users that old containers may have to be `container remove` and restarted.
-
-### Add Docker Flags (DOCKER_FLAGS.txt)
-
-Add custom Docker flags by editing `~/.code-container/DOCKER_FLAGS.txt`:
-
-```
-# Port forwarding
--p 4040:4040
--p 3000:3000
-
-# Network mode
---network host
-
-# GPU support
---gpus all
-
-
-```
-
-Each line is parsed like a shell command. Empty lines and lines starting with `#` are ignored.
-
-**After modifying:** No rebuild needed. However, flags will only be applied to new containers. Inform users that old containers may have to be `container remove` and restarted.
-
-## Harness Permissions
-
-If the user asks you to configure harnesses to run without permission prompts inside `container`, read and follow instructions in [Permissions.md](/Permissions.md).
-
-Note: Modify the configuration files inside `~/.code-container/configs` only.
+- `container [path]` — Run container for project (`commands.ts:runContainer`)
+- `container build` — Build Docker image (`commands.ts:buildImage`)
+- `container init` — Initialize config files (`commands.ts:init`)
+- `container stop` — Stop container (`commands.ts:stopContainerForProject`)
+- `container remove` — Remove container (`commands.ts:removeContainerForProject`)
+- `container list` — List all containers (`commands.ts:listContainers`)
+- `container clean` — Remove stopped containers (`commands.ts:cleanContainers`)
