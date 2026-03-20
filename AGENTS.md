@@ -116,9 +116,11 @@ Add custom Docker flags by editing `~/.code-container/DOCKER_FLAGS.txt`:
 
 # GPU support
 --gpus all
+
+
 ```
 
-Each line is split on whitespace, so `-p 4040:4040` becomes two arguments: `-p` and `4040:4040`.
+Each line is parsed like a shell command. Empty lines and lines starting with `#` are ignored.
 
 **After modifying:** No rebuild needed. However, flags will only be applied to new containers. Inform users that old containers may have to be `container remove` and restarted.
 

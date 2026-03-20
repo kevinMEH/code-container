@@ -1,5 +1,8 @@
 import * as fs from "fs";
+import { parse } from "shell-quote";
+
 import { FLAGS_PATH } from "./config";
+import { printError } from "./utils";
 
 export function loadFlags(): string[] {
   if (!fs.existsSync(FLAGS_PATH)) {
@@ -13,8 +16,27 @@ export function loadFlags(): string[] {
     if (!trimmed || trimmed.startsWith("#")) {
       continue;
     }
-    const parts = trimmed.split(/\s+/);
-    flags.push(...parts);
+
+    const parts = parse(trimmed);
+    const lineFlags: string[] = [];
+    let hasOperator = false;
+
+    for (const part of parts) {
+      if (typeof part === "string") {
+        lineFlags.push(part);
+      } else {
+        hasOperator = true;
+        break;
+      }
+    }
+
+    if (hasOperator) {
+      printError("Invalid Docker flag line: shell operators are not allowed.");
+      printError(`Argument skipped: ${line}`);
+      continue;
+    }
+
+    flags.push(...lineFlags);
   }
 
   return flags;

@@ -131,7 +131,7 @@ RUN apt-get update && apt-get install -y postgresql-client redis-tools
 --gpus all
 ```
 
-Parsing: Each line is split on whitespace, so `-p 4040:4040` becomes two arguments: `-p` and `4040:4040`. This also means that quotes won't work.
+Each line is parsed like a shell command. Empty lines and lines starting with `#` are ignored.
 
 ### Security
 
