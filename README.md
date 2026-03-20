@@ -117,6 +117,22 @@ RUN apt-get update && apt-get install -y postgresql-client redis-tools
 /absolute/path/on/host:/path/in/container:ro
 ```
 
+**Adding Docker flags**: Edit `~/.code-container/DOCKER_FLAGS.txt` to pass additional flags to `docker run`:
+
+```
+# Port forwarding
+-p 4040:4040
+-p 3000:3000
+
+# Network mode
+--network host
+
+# GPU support
+--gpus all
+```
+
+Parsing: Each line is split on whitespace, so `-p 4040:4040` becomes two arguments: `-p` and `4040:4040`. This also means that quotes won't work.
+
 ### Security
 
 - Host filesystem protected; destructive operations will only affect the container

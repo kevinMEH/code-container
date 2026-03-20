@@ -62,6 +62,7 @@ All container data is stored in `~/.code-container/`:
 │   └── .opencode/
 ├── Dockerfile        # Custom Dockerfile
 ├── MOUNTS.txt        # Additional mount points
+├── DOCKER_FLAGS.txt  # Additional docker run flags
 └── settings.json     # Internal settings
 ```
 
@@ -100,6 +101,26 @@ Add shared volumes by editing `~/.code-container/MOUNTS.txt`:
 ```
 
 **After modifying:** No rebuild needed. However, mounts will only be applied to new containers. Inform users that old containers may have to be `container remove` and restarted.
+
+### Add Docker Flags (DOCKER_FLAGS.txt)
+
+Add custom Docker flags by editing `~/.code-container/DOCKER_FLAGS.txt`:
+
+```
+# Port forwarding
+-p 4040:4040
+-p 3000:3000
+
+# Network mode
+--network host
+
+# GPU support
+--gpus all
+```
+
+Each line is split on whitespace, so `-p 4040:4040` becomes two arguments: `-p` and `4040:4040`.
+
+**After modifying:** No rebuild needed. However, flags will only be applied to new containers. Inform users that old containers may have to be `container remove` and restarted.
 
 ## Harness Permissions
 
