@@ -13,6 +13,7 @@ export const FLAGS_PATH = path.join(APPDATA_DIR, "DOCKER_FLAGS.txt");
 export const SHARED_DIRS = [
   ".claude",
   ".codex",
+  ".gh",
   ".local",
   ".opencode",
   ".gemini",
@@ -54,6 +55,7 @@ const CONFIG_SOURCES: Array<{ src: string; dest: string; isDir: boolean }> = [
   { src: path.join(os.homedir(), ".gemini"), dest: ".gemini", isDir: true },
   { src: path.join(os.homedir(), ".claude"), dest: ".claude", isDir: true },
   { src: path.join(os.homedir(), ".claude.json"), dest: ".claude.json", isDir: false },
+  { src: path.join(os.homedir(), ".config", "gh"), dest: ".gh", isDir: true },
 ];
 
 export function copyConfigs(): void {

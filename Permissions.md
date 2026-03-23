@@ -62,3 +62,22 @@ Gemini uses a "policy engine" to determine tool usage approvals. To bypass permi
     decision = "allow"
     priority = 777
     ```
+
+## GitHub Copilot CLI
+
+GitHub Copilot CLI authenticates via the `gh` CLI using an OAuth token stored in `~/.config/gh/hosts.yml`. Running `container init` will copy your existing `gh` authentication into the container automatically.
+
+To authenticate inside the container (if not already authenticated on the host):
+
+```bash
+gh auth login
+```
+
+To verify authentication inside the container:
+
+```bash
+gh auth status
+gh copilot --version
+```
+
+No additional permission bypass configuration is required — `gh copilot` does not have a separate approval/permissions system.

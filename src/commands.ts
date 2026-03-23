@@ -49,7 +49,7 @@ export async function init(isStartup: boolean = false): Promise<void> {
     if (!settings.completedInit) {
       printInfo("First run detected. Would you like to copy config files?");
       printInfo(
-        "This will copy your OpenCode, Codex, Claude Code, & Gemini CLI configs to ~/.code-container/configs for mounting."
+        "This will copy your OpenCode, Codex, Claude Code, Gemini CLI, & GitHub Copilot CLI configs to ~/.code-container/configs for mounting."
       );
       printInfo(
         "If you choose to not copy config files, you can still setup your harness once inside the container."

@@ -30,6 +30,7 @@
     - `~/.claude` → `~/.code-container/configs/.claude`
     - `~/.claude.json` → `~/.code-container/configs/.claude.json`
     - `~/.gemini` → `~/.code-container/configs/.gemini`
+    - `~/.config/gh` → `~/.code-container/configs/.gh`
 
 3. Finally, build the Docker image. This may take up to 5 minutes.
     ```bash

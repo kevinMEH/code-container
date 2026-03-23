@@ -9,6 +9,7 @@ function getCoreMounts(): string[] {
     `${CONFIGS_DIR}/.claude:/root/.claude`,
     `${CONFIGS_DIR}/.claude.json:/root/.claude.json`,
     `${CONFIGS_DIR}/.codex:/root/.codex`,
+    `${CONFIGS_DIR}/.gh:/root/.config/gh`,
     `${CONFIGS_DIR}/.opencode:/root/.config/opencode`,
     `${CONFIGS_DIR}/.gemini:/root/.gemini`,
     `${CONFIGS_DIR}/.local:/root/.local`,

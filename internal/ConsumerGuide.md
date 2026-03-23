@@ -33,7 +33,7 @@ Post-setup:
    ```
    cd /path/to/project
    container
-   opencode # OR: codex OR: claude
+   opencode # OR: codex OR: claude OR: gh copilot
    ```
 2. Give users a quick overview of common commands.
    ```bash
@@ -58,6 +58,7 @@ All container data is stored in `~/.code-container/`:
 │   ├── .claude.json
 │   ├── .codex/
 │   ├── .gemini/
+│   ├── .gh/
 │   ├── .local/
 │   └── .opencode/
 ├── Dockerfile        # Custom Dockerfile
