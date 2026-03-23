@@ -1,4 +1,4 @@
-**Important: Role Identification:** Identify whether your user is a **developer** or a **consumer**.
+**Important: You must perform user identification.** Identify whether your user is a **developer** or a **consumer**.
 
 If your user asks questions like:
 - Help me setup `container` / code-container / this project
