@@ -23,5 +23,5 @@ if (!fs.existsSync(DOCKERFILE_PATH)) {
 }
 
 if (!fs.existsSync(FLAGS_PATH)) {
-  fs.writeFileSync(FLAGS_PATH, "# Add custom Docker flags here (one per line)\n# Example: -p 7777:7777\n");
+  fs.writeFileSync(FLAGS_PATH, "# Add custom Docker flags here (one per line)\n# Note: These flags are passed to every created container.\n");
 }
