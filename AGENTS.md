@@ -102,6 +102,7 @@ All user data stored in `~/.code-container/`:
 ## CLI Commands
 
 - `container [path]` — Run container for project (`commands.ts:runContainer`)
+- `container run [path] [-- DOCKER_FLAGS]` — Run container with optional Docker flags
 - `container build` — Build Docker image (`commands.ts:buildImage`)
 - `container init` — Initialize config files (`commands.ts:init`)
 - `container stop` — Stop container (`commands.ts:stopContainerForProject`)
