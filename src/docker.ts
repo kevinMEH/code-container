@@ -106,7 +106,8 @@ export function removeContainer(containerName: string): void {
 export function createNewContainer(
   containerName: string,
   projectName: string,
-  projectPath: string
+  projectPath: string,
+  cliFlags: string[] = []
 ): boolean {
   const mounts = getMounts(projectPath, projectName);
   const args = ["run", "-d", "--name", containerName];
@@ -120,6 +121,7 @@ export function createNewContainer(
 
   const flags = loadFlags();
   args.push(...flags);
+  args.push(...cliFlags);
 
   args.push(`${IMAGE_NAME}:${IMAGE_TAG}`, "sleep", "infinity");
 

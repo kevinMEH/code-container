@@ -57,7 +57,7 @@ async function ensureTosAccepted(): Promise<boolean> {
 
 function usage(): void {
   console.log(`
-Usage: container [COMMAND] [PROJECT_PATH]
+Usage: container [COMMAND] [PROJECT_PATH] [-- DOCKER_FLAGS...]
 
 Manage Code containers for isolated project environments.
 
@@ -73,10 +73,13 @@ Commands:
 
 Arguments:
     PROJECT_PATH    Path to the project directory (defaults to current directory)
+    DOCKER_FLAGS    Additional flags passed to 'docker run' after '--'
 
 Examples:
     container                           # Start container for current directory
     container run /path/to/project      # Start container for specific project
+    container run /path -- -p 8080:80   # Pass Docker flags for port mapping
+    container run -- -e FOO=bar         # Pass env vars (uses current directory)
     container build                     # Build Docker image
     container init                      # Copy config files
     container stop                      # Stop container for current directory
@@ -91,6 +94,7 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   let command = "";
   let projectPath = "";
+  let cliFlags: string[] = [];
 
   if (args.length > 0) {
     const firstArg = args[0];
@@ -109,12 +113,23 @@ async function main(): Promise<void> {
     ];
     if (validCommands.includes(firstArg)) {
       command = firstArg;
-      if (args.length > 1) {
-        projectPath = args[1];
-      }
-      if (args.length > 2) {
-        printError(`Unexpected argument: ${args[2]}`);
-        usage();
+      const remainingArgs = args.slice(1);
+      const separatorIndex = remainingArgs.indexOf("--");
+      
+      if (separatorIndex !== -1) {
+        const pathArgs = remainingArgs.slice(0, separatorIndex);
+        if (pathArgs.length > 1) {
+          printError(`Unexpected argument: ${pathArgs[1]}`);
+          usage();
+        }
+        projectPath = pathArgs[0] || "";
+        cliFlags = remainingArgs.slice(separatorIndex + 1);
+      } else {
+        projectPath = remainingArgs[0] || "";
+        if (remainingArgs.length > 1) {
+          printError(`Unexpected argument: ${remainingArgs[1]}`);
+          usage();
+        }
       }
     } else {
       printError(`Unknown command: ${firstArg}`);
@@ -156,7 +171,7 @@ async function main(): Promise<void> {
       return;
     case "run":
     case "":
-      await runContainer(resolvedPath);
+      await runContainer(resolvedPath, cliFlags);
       return;
   }
 }

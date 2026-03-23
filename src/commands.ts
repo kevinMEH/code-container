@@ -87,7 +87,7 @@ export async function init(isStartup: boolean = false): Promise<void> {
   }
 }
 
-export async function runContainer(projectPath: string): Promise<void> {
+export async function runContainer(projectPath: string, cliFlags: string[] = []): Promise<void> {
   const containerName = generateContainerName(projectPath);
   const projectName = path.basename(projectPath);
 
@@ -124,7 +124,7 @@ export async function runContainer(projectPath: string): Promise<void> {
   printInfo(`Creating new container: ${containerName}`);
   printInfo(`Project: ${projectPath}`);
 
-  if (!createNewContainer(containerName, projectName, projectPath)) {
+  if (!createNewContainer(containerName, projectName, projectPath, cliFlags)) {
     printError("Failed to create container");
     process.exit(1);
   }

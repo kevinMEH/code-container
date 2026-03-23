@@ -1,4 +1,4 @@
-**Important: Role Identification:** Identify whether your user is a **developer** or a **consumer**.
+**Important: You must perform user identification.** Identify whether your user is a **developer** or a **consumer**.
 
 If your user asks questions like:
 - Help me setup `container` / code-container / this project
@@ -102,6 +102,7 @@ All user data stored in `~/.code-container/`:
 ## CLI Commands
 
 - `container [path]` — Run container for project (`commands.ts:runContainer`)
+- `container run [path] [-- DOCKER_FLAGS]` — Run container with optional Docker flags
 - `container build` — Build Docker image (`commands.ts:buildImage`)
 - `container init` — Initialize config files (`commands.ts:init`)
 - `container stop` — Stop container (`commands.ts:stopContainerForProject`)
