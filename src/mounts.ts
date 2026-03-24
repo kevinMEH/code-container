@@ -24,10 +24,10 @@ export async function ensureMountsFile(): Promise<void> {
 
   ensureAppdataDir();
   const home = os.homedir();
-  const mounts: string[] = [...getCoreMounts()];
+  const mounts: string[] = [];
 
   printInfo("");
-  printInfo("MOUNTS.txt not found. Setting up default mount points.");
+  printInfo("MOUNTS.txt not found. Creating....");
   printInfo("");
   printInfo("Would you like to mount ~/.ssh (read-only)?");
   printInfo(
@@ -48,16 +48,23 @@ export async function ensureMountsFile(): Promise<void> {
   fs.writeFileSync(MOUNTS_PATH, mounts.join("\n") + "\n", { mode: 0o600 });
   printInfo("");
   printInfo(`Created ${MOUNTS_PATH}`);
-  printInfo("You can edit this file to customize mount points.");
+  printInfo("Core mounts are always applied. Modify this file to store additional mount points.");
 }
 
 export function loadMounts(): string[] {
-  if (!fs.existsSync(MOUNTS_PATH)) {
-    return [];
+  const coreMounts = getCoreMounts();
+  const mountSet = new Set(coreMounts);
+
+  if (fs.existsSync(MOUNTS_PATH)) {
+    const content = fs.readFileSync(MOUNTS_PATH, "utf-8");
+    const extraMounts = content
+      .split("\n")
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith("#"));
+    for (const mount of extraMounts) {
+      mountSet.add(mount);
+    }
   }
-  const content = fs.readFileSync(MOUNTS_PATH, "utf-8");
-  return content
-    .split("\n")
-    .map(line => line.trim())
-    .filter(line => line && !line.startsWith("#"));
+
+  return Array.from(mountSet);
 }
