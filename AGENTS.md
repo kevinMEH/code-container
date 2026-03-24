@@ -18,7 +18,7 @@ If your user is a developer, proceed like normal.
 
 # Developer Overview
 
-**code-container** (`container`) creates isolated Docker environments for AI coding harnesses (Claude Code, OpenCode, Codex CLI, Gemini CLI).
+**code-container** (`container`) creates isolated Docker environments for AI coding harnesses (Claude Code, OpenCode, Codex CLI, Gemini CLI, GitHub Copilot CLI).
 
 ## Purpose
 
@@ -90,6 +90,7 @@ All user data stored in `~/.code-container/`:
 │   ├── .claude/
 │   ├── .claude.json
 │   ├── .codex/
+│   ├── .copilot/
 │   ├── .gemini/
 │   ├── .local/
 │   └── .opencode/

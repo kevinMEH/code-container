@@ -27,6 +27,7 @@
     Alternatively, you can copy configs manually:
     - `~/.config/opencode` → `~/.code-container/configs/.opencode`
     - `~/.codex` → `~/.code-container/configs/.codex`
+    - `~/.copilot` → `~/.code-container/configs/.copilot`
     - `~/.claude` → `~/.code-container/configs/.claude`
     - `~/.claude.json` → `~/.code-container/configs/.claude.json`
     - `~/.gemini` → `~/.code-container/configs/.gemini`

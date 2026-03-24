@@ -13,6 +13,7 @@ export const FLAGS_PATH = path.join(APPDATA_DIR, "DOCKER_FLAGS.txt");
 export const SHARED_DIRS = [
   ".claude",
   ".codex",
+  ".copilot",
   ".local",
   ".opencode",
   ".gemini",
@@ -51,6 +52,7 @@ export function saveSettings(settings: Settings): void {
 const CONFIG_SOURCES: Array<{ src: string; dest: string; isDir: boolean }> = [
   { src: path.join(os.homedir(), ".config", "opencode"), dest: ".opencode", isDir: true },
   { src: path.join(os.homedir(), ".codex"), dest: ".codex", isDir: true },
+  { src: path.join(os.homedir(), ".copilot"), dest: ".copilot", isDir: true },
   { src: path.join(os.homedir(), ".gemini"), dest: ".gemini", isDir: true },
   { src: path.join(os.homedir(), ".claude"), dest: ".claude", isDir: true },
   { src: path.join(os.homedir(), ".claude.json"), dest: ".claude.json", isDir: false },

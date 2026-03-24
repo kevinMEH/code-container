@@ -57,6 +57,9 @@ RUN npm install -g @openai/codex
 # Install Gemini CLI
 RUN npm install -g @google/gemini-cli
 
+# Install GitHub Copilot CLI
+RUN npm install -g @github/copilot
+
 # Set working directory to root home
 WORKDIR /root
 
