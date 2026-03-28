@@ -134,6 +134,7 @@ export function execInteractive(
   containerName: string,
   projectName: string
 ): void {
+  const flags = loadFlags();
   spawnSync(
     "docker",
     [
@@ -145,6 +146,7 @@ export function execInteractive(
       "COLORTERM=truecolor",
       "-w",
       `/root/${projectName}`,
+      ...flags,
       containerName,
       "/bin/bash",
     ],
