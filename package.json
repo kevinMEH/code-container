@@ -1,6 +1,6 @@
 {
   "name": "code-container",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Manage isolated Docker containers for running coding tools on different projects",
   "main": "dist/main.js",
   "bin": {
@@ -19,12 +19,6 @@
     "publish-latest": "npm run clean && npm run build && npm publish",
     "publish-nightly": "npm run clean && npm run build && npm publish --tag nightly"
   },
-  "keywords": [
-    "docker",
-    "container",
-    "development",
-    "cli"
-  ],
   "author": "kevinMEH",
   "license": "MIT",
   "repository": {
@@ -41,5 +35,25 @@
     "@types/shell-quote": "^1.7.5",
     "shell-quote": "^1.7.4",
     "zod": "^4.3.6"
-  }
+  },
+  "keywords": [
+    "docker",
+    "container",
+    "development",
+    "cli",
+    "opencode",
+    "open code",
+    "claude code",
+    "claude",
+    "codex",
+    "openai",
+    "anthropic",
+    "chatbot",
+    "harness",
+    "vibe coding",
+    "gemini",
+    "gemini cli",
+    "copilot",
+    "github copilot"
+  ]
 }

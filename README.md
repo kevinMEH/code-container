@@ -119,15 +119,21 @@ RUN apt-get update && apt-get install -y postgresql-client redis-tools
 /absolute/path/on/host:/path/in/container:ro
 ```
 
-**Adding Docker flags**: Edit `~/.code-container/DOCKER_FLAGS.txt` to pass additional flags to `docker run`:
+**Adding Docker flags**:
+
+Edit `~/.code-container/DOCKER_FLAGS.txt` to pass additional flags to both `docker run` and `docker exec`:
+
+```
+# Environment variables
+-e MY_VAR=value
+```
+
+For flags that only apply to `docker run` (e.g. port forwarding, network, GPU), use `~/.code-container/DOCKER_RUN_FLAGS.txt`:
 
 ```
 # Port forwarding
 -p 4040:4040
 -p 3000:3000
-
-# Network mode
---network host
 
 # GPU support
 --gpus all

@@ -9,6 +9,7 @@ export const DOCKERFILE_PATH = path.join(APPDATA_DIR, "Dockerfile");
 export const SETTINGS_PATH = path.join(APPDATA_DIR, "settings.json");
 export const MOUNTS_PATH = path.join(APPDATA_DIR, "MOUNTS.txt");
 export const FLAGS_PATH = path.join(APPDATA_DIR, "DOCKER_FLAGS.txt");
+export const RUN_FLAGS_PATH = path.join(APPDATA_DIR, "DOCKER_RUN_FLAGS.txt");
 
 export const SHARED_DIRS = [
   ".claude",
