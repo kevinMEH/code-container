@@ -113,6 +113,7 @@ export function createNewContainer(
   const args = ["run", "-d", "--name", containerName];
 
   args.push("-e", "TERM=xterm-256color");
+  args.push("-e", "COLORTERM=truecolor");
   args.push("-w", `/root/${projectName}`);
 
   for (const mount of mounts) {
@@ -140,6 +141,8 @@ export function execInteractive(
       "-it",
       "-e",
       "TERM=xterm-256color",
+      "-e",
+      "COLORTERM=truecolor",
       "-w",
       `/root/${projectName}`,
       containerName,
