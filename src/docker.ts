@@ -5,7 +5,7 @@ import * as crypto from "crypto";
 import { printInfo, printError } from "./utils";
 import { APPDATA_DIR, DOCKERFILE_PATH } from "./config";
 import { loadMounts } from "./mounts";
-import { loadFlags } from "./flags";
+import { loadFlags, loadRunFlags } from "./flags";
 
 export const IMAGE_NAME = "code-container";
 export const IMAGE_TAG = "latest";
@@ -121,7 +121,9 @@ export function createNewContainer(
   }
 
   const flags = loadFlags();
+  const runFlags = loadRunFlags();
   args.push(...flags);
+  args.push(...runFlags);
   args.push(...cliFlags);
 
   args.push(`${IMAGE_NAME}:${IMAGE_TAG}`, "sleep", "infinity");
