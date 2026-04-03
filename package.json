@@ -9,7 +9,8 @@
   "files": [
     "dist",
     "scripts",
-    "Dockerfile"
+    "Dockerfile",
+    "Dockerfile.User"
   ],
   "scripts": {
     "build": "tsc && chmod u+x dist/main.js",

@@ -106,11 +106,15 @@ Destructive actions are localized inside containers.
 
 Easily add your own tooling & mount points.
 
-**Adding tools/packages**: Edit `~/.code-container/Dockerfile` and rebuild:
+**Adding tools/packages**: Edit `~/.code-container/Dockerfile.User` and rebuild:
 
 ```dockerfile
+FROM code-container-base:latest
+
 RUN apt-get update && apt-get install -y postgresql-client redis-tools
 ```
+
+> **Deprecation Notice**: `~/.code-container/Dockerfile` is deprecated and no longer used. If you previously customized this file, migrate your custom `RUN` commands to `~/.code-container/Dockerfile.User`.
 
 **Adding mount points**: Edit `~/.code-container/MOUNTS.txt` and reinitialize containers:
 
