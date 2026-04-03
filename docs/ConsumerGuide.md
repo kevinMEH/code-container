@@ -126,6 +126,6 @@ Each line is parsed like a shell command. Empty lines and lines starting with `#
 
 ## Harness Permissions
 
-If the user asks you to configure harnesses to run without permission prompts inside `container`, read and follow instructions in [Permissions.md](/Permissions.md).
+If the user asks you to configure harnesses to run without permission prompts inside `container`, read and follow instructions in [Permissions.md](/docs/Permissions.md).
 
 Note: Modify the configuration files inside `~/.code-container/configs` only.

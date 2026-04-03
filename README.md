@@ -93,7 +93,7 @@ container init             # Copy/recopy config files
 
 Destructive actions are localized inside containers.
 - You can let your harness run with full permissions
-- To configure your harness to run without permissions, see [`Permissions.md`](Permissions.md).
+- To configure your harness to run without permissions, see [`Permissions.md`](docs/Permissions.md).
 
 ### Customization
 
