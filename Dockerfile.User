@@ -1,0 +1,3 @@
+# User customizations for code-container
+# Add your RUN, ENV, COPY, etc. directives below.
+FROM code-container-base:latest

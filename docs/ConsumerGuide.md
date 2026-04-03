@@ -22,7 +22,7 @@ Setup: Do for the user, one step at a time.
    ```bash
    container init
    ```
-3. Setup is done. Now, read `~/.code-container/Dockerfile`, which is the default packaged Dockerfile. Provide a brief list of included packages to the user. Then, ask user if they would like to add more packages into container environment. If yes, see `Add Packages/Dependencies` section below.
+3. Setup is done. Now, read the `Dockerfile` and the user's `~/.code-container/Dockerfile.User` if exists. Provide a brief list of included packages to the user. Then, ask user if they would like to add more packages into container environment. If yes, see `Add Packages/Dependencies` section below.
 4. Build the Docker image for the user. Before you build, tell the user that building the image may take up to 5 minutes.
    ```bash
    container build
@@ -60,7 +60,7 @@ All container data is stored in `~/.code-container/`:
 │   ├── .gemini/
 │   ├── .local/
 │   └── .opencode/
-├── Dockerfile        # Custom Dockerfile
+├── Dockerfile.User    # User customizations layered on base image
 ├── MOUNTS.txt        # Additional mount points
 ├── DOCKER_FLAGS.txt  # Additional docker run flags
 └── settings.json     # Internal settings
@@ -68,11 +68,15 @@ All container data is stored in `~/.code-container/`:
 
 ## Customization
 
-### Add Packages/Dependencies (Dockerfile)
+### Add Packages/Dependencies (Dockerfile.User)
 
-Add new tools by extending the RUN commands in `~/.code-container/Dockerfile`:
+> **Deprecation Notice**: `~/.code-container/Dockerfile` is deprecated and no longer used. If the user previously customized this file, offer to migrate their custom `RUN` commands to `~/.code-container/Dockerfile.User`.
+
+Add new tools by editing `~/.code-container/Dockerfile.User`:
 
 ```dockerfile
+FROM code-container-base:latest
+
 # System packages (Ubuntu/Debian)
 RUN apt-get update && apt-get install -y \
     postgresql-client \
@@ -126,6 +130,6 @@ Each line is parsed like a shell command. Empty lines and lines starting with `#
 
 ## Harness Permissions
 
-If the user asks you to configure harnesses to run without permission prompts inside `container`, read and follow instructions in [Permissions.md](/Permissions.md).
+If the user asks you to configure harnesses to run without permission prompts inside `container`, read and follow instructions in [Permissions.md](/docs/Permissions.md).
 
 Note: Modify the configuration files inside `~/.code-container/configs` only.

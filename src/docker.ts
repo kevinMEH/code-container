@@ -3,13 +3,15 @@ import * as path from "path";
 import * as fs from "fs";
 import * as crypto from "crypto";
 import { printInfo, printError } from "./utils";
-import { APPDATA_DIR, DOCKERFILE_PATH } from "./config";
+import { APPDATA_DIR, USER_DOCKERFILE_PATH } from "./config";
 import { loadMounts } from "./mounts";
 import { loadFlags, loadRunFlags } from "./flags";
 
 export const IMAGE_NAME = "code-container";
 export const IMAGE_TAG = "latest";
+export const BASE_IMAGE = "code-container-base";
 const PACKAGED_DOCKERFILE = path.resolve(__dirname, "..", "Dockerfile");
+const PACKAGED_USER_DOCKERFILE = path.resolve(__dirname, "..", "Dockerfile.User");
 const CONTAINER_PREFIX = "container";
 
 export function checkDocker(): void {
@@ -51,28 +53,36 @@ export function imageExists(): boolean {
 }
 
 export function ensureDockerfile(): void {
-  if (!fs.existsSync(DOCKERFILE_PATH)) {
-    if (fs.existsSync(PACKAGED_DOCKERFILE)) {
+  if (!fs.existsSync(USER_DOCKERFILE_PATH)) {
+    if (fs.existsSync(PACKAGED_USER_DOCKERFILE)) {
       printInfo(
-        `Dockerfile not found at ${DOCKERFILE_PATH}, copying from package...`
+        `Dockerfile.User not found at ${USER_DOCKERFILE_PATH}, copying from package...`
       );
-      fs.copyFileSync(PACKAGED_DOCKERFILE, DOCKERFILE_PATH);
+      fs.copyFileSync(PACKAGED_USER_DOCKERFILE, USER_DOCKERFILE_PATH);
     } else {
       throw new Error(
-        `Dockerfile not found at ${DOCKERFILE_PATH} and no packaged Dockerfile available`
+        `Dockerfile.User not found at ${USER_DOCKERFILE_PATH} and no packaged Dockerfile.User available`
       );
     }
   }
 }
 
 export function buildImageRaw(): boolean {
-  ensureDockerfile();
-  const result = spawnSync(
+  const baseResult = spawnSync(
     "docker",
-    ["build", "-t", `${IMAGE_NAME}:${IMAGE_TAG}`, APPDATA_DIR],
+    ["build", "-t", `${BASE_IMAGE}:${IMAGE_TAG}`, "-f", PACKAGED_DOCKERFILE, APPDATA_DIR],
     { stdio: "inherit" }
   );
-  return result.status === 0;
+  if (baseResult.status !== 0) return false;
+
+  ensureDockerfile();
+
+  const userResult = spawnSync(
+    "docker",
+    ["build", "-f", USER_DOCKERFILE_PATH, "-t", `${IMAGE_NAME}:${IMAGE_TAG}`, APPDATA_DIR],
+    { stdio: "inherit" }
+  );
+  return userResult.status === 0;
 }
 
 export function containerExists(containerName: string): boolean {

@@ -1,6 +1,6 @@
 {
   "name": "code-container",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Manage isolated Docker containers for running coding tools on different projects",
   "main": "dist/main.js",
   "bin": {
@@ -9,7 +9,8 @@
   "files": [
     "dist",
     "scripts",
-    "Dockerfile"
+    "Dockerfile",
+    "Dockerfile.User"
   ],
   "scripts": {
     "build": "tsc && chmod u+x dist/main.js",

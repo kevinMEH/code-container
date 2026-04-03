@@ -6,10 +6,10 @@ const os = require("os");
 
 const APPDATA_DIR = path.join(os.homedir(), ".code-container");
 const CONFIGS_DIR = path.join(APPDATA_DIR, "configs");
-const DOCKERFILE_PATH = path.join(APPDATA_DIR, "Dockerfile");
+const USER_DOCKERFILE_PATH = path.join(APPDATA_DIR, "Dockerfile.User");
+const PACKAGED_USER_DOCKERFILE = path.join(__dirname, "..", "Dockerfile.User");
 const FLAGS_PATH = path.join(APPDATA_DIR, "DOCKER_FLAGS.txt");
 const RUN_FLAGS_PATH = path.join(APPDATA_DIR, "DOCKER_RUN_FLAGS.txt");
-const PACKAGED_DOCKERFILE = path.join(__dirname, "..", "Dockerfile");
 
 if (!fs.existsSync(APPDATA_DIR)) {
   fs.mkdirSync(APPDATA_DIR, { recursive: true, mode: 0o700 });
@@ -19,8 +19,8 @@ if (!fs.existsSync(CONFIGS_DIR)) {
   fs.mkdirSync(CONFIGS_DIR, { recursive: true, mode: 0o700 });
 }
 
-if (!fs.existsSync(DOCKERFILE_PATH)) {
-  fs.copyFileSync(PACKAGED_DOCKERFILE, DOCKERFILE_PATH);
+if (!fs.existsSync(USER_DOCKERFILE_PATH)) {
+  fs.copyFileSync(PACKAGED_USER_DOCKERFILE, USER_DOCKERFILE_PATH);
 }
 
 if (!fs.existsSync(FLAGS_PATH)) {
