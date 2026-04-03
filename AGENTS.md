@@ -30,7 +30,7 @@ If your user is a developer, proceed like normal.
 ## Key Features
 
 - **Security**: Destructive operations localized to containers
-- **Customization**: Add packages via `~/.code-container/Dockerfile`, mounts via `MOUNTS.txt`, flags via `DOCKER_FLAGS.txt` and `DOCKER_RUN_FLAGS.txt`
+- **Customization**: Add packages via `~/.code-container/Dockerfile.User`, mounts via `MOUNTS.txt`, flags via `DOCKER_FLAGS.txt` and `DOCKER_RUN_FLAGS.txt`
 - **Simultaneous Work**: Multiple agents can work on same project safely
 - **Persistence**: Container state and harness configs persist
 
