@@ -51,6 +51,15 @@ You're done 🎉; `container` is now ready to use.
 > container build
 > ```
 > Note: Ensure that all work is saved and the container is ready for deletion. Containers from the previous version are not compatible with containers from the current version.
+>
+
+### Try Nitro
+
+Psst: Try my newest project: [Nitro, a simple and efficient Bash harness.](https://github.com/aerovato/nitro) 11x cheaper; 75x more efficient vs Claude Code for Bash tasks.
+
+```bash
+npm install -g @aerovato/nitro
+```
 
 ## Usage
 
