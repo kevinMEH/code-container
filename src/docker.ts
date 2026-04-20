@@ -70,7 +70,7 @@ export function ensureDockerfile(): void {
 export function buildImageRaw(): boolean {
   const baseResult = spawnSync(
     "docker",
-    ["build", "-t", `${BASE_IMAGE}:${IMAGE_TAG}`, "-f", PACKAGED_DOCKERFILE, APPDATA_DIR],
+    ["build", "--no-cache", "-t", `${BASE_IMAGE}:${IMAGE_TAG}`, "-f", PACKAGED_DOCKERFILE, APPDATA_DIR],
     { stdio: "inherit" }
   );
   if (baseResult.status !== 0) return false;
@@ -79,7 +79,7 @@ export function buildImageRaw(): boolean {
 
   const userResult = spawnSync(
     "docker",
-    ["build", "-f", USER_DOCKERFILE_PATH, "-t", `${IMAGE_NAME}:${IMAGE_TAG}`, APPDATA_DIR],
+    ["build", "--no-cache", "-f", USER_DOCKERFILE_PATH, "-t", `${IMAGE_NAME}:${IMAGE_TAG}`, APPDATA_DIR],
     { stdio: "inherit" }
   );
   return userResult.status === 0;
@@ -102,7 +102,7 @@ export function containerRunning(containerName: string): boolean {
 }
 
 export function stopContainer(containerName: string): void {
-  spawnSync("docker", ["stop", "--timeout", "3", containerName], { stdio: "inherit" });
+  spawnSync("docker", ["stop", "-t", "3", containerName], { stdio: "inherit" });
 }
 
 export function startContainer(containerName: string): void {
