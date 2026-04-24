@@ -30,3 +30,40 @@ if (!fs.existsSync(FLAGS_PATH)) {
 if (!fs.existsSync(RUN_FLAGS_PATH)) {
   fs.writeFileSync(RUN_FLAGS_PATH, "# Add Docker run-only flags here (one per line)\n# Note: These flags are only passed to 'docker run', not 'docker exec'.\n# Use this for flags like -v, --network, --restart that are not valid for exec.\n");
 }
+
+// --- Migration: Remove stale core mounts from MOUNTS.txt ---
+// Prior to v2.2.0, `container init` wrote core mounts directly into MOUNTS.txt.
+// Core mounts are now applied in-memory at runtime (see getCoreMounts() in mounts.ts).
+// Old entries in MOUNTS.txt can conflict with updated core mounts (e.g. the old
+// /root/.local mount shadows the new /root/.local/share and /root/.local/state mounts).
+// This block removes those stale entries on upgrade.
+const MOUNTS_PATH = path.join(APPDATA_DIR, "MOUNTS.txt");
+const STALE_CONTAINER_PATHS = [
+  "/root/.claude",
+  "/root/.claude.json",
+  "/root/.codex",
+  "/root/.copilot",
+  "/root/.config/opencode",
+  "/root/.gemini",
+  "/root/.local",
+  "/root/.gitconfig",
+];
+
+if (fs.existsSync(MOUNTS_PATH)) {
+  const content = fs.readFileSync(MOUNTS_PATH, "utf-8");
+  const lines = content.split("\n");
+  const cleaned = lines.filter(line => {
+    // Filter out all lines with target location in STALE_CONTAINER_PATHS
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) return true;
+    const parts = trimmed.split(":");
+    const containerPath = parts.length >= 2 ? parts[1] : null;
+    return containerPath === null || !STALE_CONTAINER_PATHS.includes(containerPath);
+  });
+  const cleanedContent = cleaned.join("\n");
+  if (cleanedContent !== content) {
+    fs.writeFileSync(MOUNTS_PATH, cleanedContent, { mode: 0o600 });
+    console.log("Note: Removed outdated core mounts from MOUNTS.txt")
+  }
+}
+// --- End Migration ---
