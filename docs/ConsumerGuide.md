@@ -59,6 +59,8 @@ All container data is stored in `~/.code-container/`:
 │   ├── .codex/
 │   ├── .gemini/
 │   ├── .local/
+│   │   ├── share/
+│   │   └── state/
 │   └── .opencode/
 ├── Dockerfile.User    # User customizations layered on base image
 ├── MOUNTS.txt        # Additional mount points

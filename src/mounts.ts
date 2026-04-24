@@ -12,7 +12,8 @@ function getCoreMounts(): string[] {
     `${CONFIGS_DIR}/.copilot:/root/.copilot`,
     `${CONFIGS_DIR}/.opencode:/root/.config/opencode`,
     `${CONFIGS_DIR}/.gemini:/root/.gemini`,
-    `${CONFIGS_DIR}/.local:/root/.local`,
+    `${CONFIGS_DIR}/.local/share:/root/.local/share`,
+    `${CONFIGS_DIR}/.local/state:/root/.local/state`,
     `${home}/.gitconfig:/root/.gitconfig:ro`,
   ];
 }
