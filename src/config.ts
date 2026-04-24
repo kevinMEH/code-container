@@ -15,7 +15,8 @@ export const SHARED_DIRS = [
   ".claude",
   ".codex",
   ".copilot",
-  ".local",
+  ".local/share",
+  ".local/state",
   ".opencode",
   ".gemini",
 ];
