@@ -15,8 +15,12 @@
   "scripts": {
     "build": "tsc && chmod u+x dist/main.js",
     "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "start": "node dist/main.js",
+    "lint": "eslint .",
+    "format": "prettier --write --ignore-unknown .",
+    "prepare": "husky",
     "postinstall": "node scripts/postinstall.js",
     "publish-latest": "npm run clean && npm run build && npm publish",
     "publish-nightly": "npm run clean && npm run build && npm publish --tag nightly"
@@ -30,9 +34,14 @@
   "bugs": "https://github.com/kevinMEH/code-container/issues",
   "homepage": "https://github.com/kevinMEH/code-container",
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^20.19.37",
+    "eslint": "^10.3.0",
+    "husky": "^9.1.7",
     "memfs": "^4.57.2",
+    "prettier": "^3.8.3",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.59.1",
     "vitest": "^4.1.5"
   },
   "dependencies": {
