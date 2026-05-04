@@ -11,9 +11,11 @@ Note: You are not allowed to run the `container` command as it will bring up an 
 If the user asks you to setup `container`, follow the following steps.
 
 Pre-setup:
+
 - Read `./README.md`
 
 Setup: Do for the user, one step at a time.
+
 1. Install `container` as NPM package:
    ```bash
    npm install -g code-container
@@ -29,6 +31,7 @@ Setup: Do for the user, one step at a time.
    ```
 
 Post-setup:
+
 1. Provide instructions on how to use container:
    ```
    cd /path/to/project
@@ -92,6 +95,7 @@ RUN pip install requests pandas
 ```
 
 **After modifying:**
+
 - Run `container build` to rebuild.
 
 ### Add Mount Points (MOUNTS.txt)

@@ -115,7 +115,7 @@ describe("stopContainerIfLastSession", () => {
     spawnSync.__enqueue({ status: 0, stdout: "", stderr: "" });
     stopContainerIfLastSession("container-foo-abc12345", "foo");
     const calls = spawnSync.__getCalls();
-    const stopCall = calls.find(c => c.args && c.args[0] === "stop");
+    const stopCall = calls.find((c) => c.args && c.args[0] === "stop");
     expect(stopCall).toBeDefined();
   });
 
@@ -127,7 +127,7 @@ describe("stopContainerIfLastSession", () => {
     });
     stopContainerIfLastSession("container-foo-abc12345", "foo");
     const calls = spawnSync.__getCalls();
-    const stopCall = calls.find(c => c.args && c.args[0] === "stop");
+    const stopCall = calls.find((c) => c.args && c.args[0] === "stop");
     expect(stopCall).toBeUndefined();
   });
 });

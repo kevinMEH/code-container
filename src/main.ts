@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 
-import { printError, printInfo, promptYesNo, resolveProjectPath } from "./utils";
+import {
+  printError,
+  printInfo,
+  promptYesNo,
+  resolveProjectPath,
+} from "./utils";
 import {
   buildImage,
   runContainer,
@@ -115,7 +120,7 @@ async function main(): Promise<void> {
       command = firstArg;
       const remainingArgs = args.slice(1);
       const separatorIndex = remainingArgs.indexOf("--");
-      
+
       if (separatorIndex !== -1) {
         const pathArgs = remainingArgs.slice(0, separatorIndex);
         if (pathArgs.length > 1) {
@@ -137,7 +142,7 @@ async function main(): Promise<void> {
     }
   }
 
-  if (!await ensureTosAccepted()) {
+  if (!(await ensureTosAccepted())) {
     printInfo("Terms not accepted. Exiting...");
     process.exit(1);
   }

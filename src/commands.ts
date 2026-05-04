@@ -49,10 +49,10 @@ export async function init(isStartup: boolean = false): Promise<void> {
     if (!settings.completedInit) {
       printInfo("First run detected. Would you like to copy config files?");
       printInfo(
-        "This will copy your OpenCode, Codex, Claude Code, & Gemini CLI configs to ~/.code-container/configs for mounting."
+        "This will copy your OpenCode, Codex, Claude Code, & Gemini CLI configs to ~/.code-container/configs for mounting.",
       );
       printInfo(
-        "If you choose to not copy config files, you can still setup your harness once inside the container."
+        "If you choose to not copy config files, you can still setup your harness once inside the container.",
       );
 
       const shouldCopy = await promptYesNo("Copy config files?");
@@ -76,7 +76,7 @@ export async function init(isStartup: boolean = false): Promise<void> {
       saveSettings(settings);
     } else {
       printWarning(
-        "Config files already exist. This operation will merge and overwrite existing config files."
+        "Config files already exist. This operation will merge and overwrite existing config files.",
       );
       const shouldCopy = await promptYesNo("Continue?");
       if (shouldCopy) {
@@ -87,13 +87,16 @@ export async function init(isStartup: boolean = false): Promise<void> {
   }
 }
 
-export async function runContainer(projectPath: string, cliFlags: string[] = []): Promise<void> {
+export async function runContainer(
+  projectPath: string,
+  cliFlags: string[] = [],
+): Promise<void> {
   const containerName = generateContainerName(projectPath);
   const projectName = path.basename(projectPath);
 
   if (!fs.existsSync(projectPath) || !fs.statSync(projectPath).isDirectory()) {
     printError(
-      `Project directory does not exist or is not a directory: ${projectPath}`
+      `Project directory does not exist or is not a directory: ${projectPath}`,
     );
     process.exit(1);
   }

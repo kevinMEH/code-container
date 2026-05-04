@@ -1,6 +1,7 @@
 **Important: You must perform user identification.** Identify whether your user is a **developer** or a **consumer**.
 
 If your user asks questions like:
+
 - Help me setup `container` / code-container / this project
 - Please configure all my container harnesses to run without permissions.
 - Add the following packages to the container environment: ...
@@ -9,6 +10,7 @@ If your user asks questions like:
 - Other questions relating to using `container`
 
 Then your user is a **consumer**.
+
 - The user is seeking your assistance in helping them setup or configure this project.
 - Next step: **Read `docs/ConsumerGuide.md`** and assist the user in installing or configurating `container`.
 

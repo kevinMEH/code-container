@@ -31,7 +31,7 @@ describe("loadSettings", () => {
     fs.mkdirSync(APPDATA_DIR, { recursive: true });
     fs.writeFileSync(
       SETTINGS_PATH,
-      JSON.stringify({ completedInit: true, acceptedTos: true })
+      JSON.stringify({ completedInit: true, acceptedTos: true }),
     );
     expect(loadSettings()).toEqual({ completedInit: true, acceptedTos: true });
   });
@@ -46,7 +46,7 @@ describe("loadSettings", () => {
     fs.mkdirSync(APPDATA_DIR, { recursive: true });
     fs.writeFileSync(
       SETTINGS_PATH,
-      JSON.stringify({ completedInit: "not a boolean" })
+      JSON.stringify({ completedInit: "not a boolean" }),
     );
     expect(() => loadSettings()).toThrow();
   });
@@ -56,7 +56,10 @@ describe("saveSettings", () => {
   it("writes settings as JSON and creates appdata dir", () => {
     saveSettings({ completedInit: true, acceptedTos: false });
     const content = fs.readFileSync(SETTINGS_PATH, "utf-8");
-    expect(JSON.parse(content)).toEqual({ completedInit: true, acceptedTos: false });
+    expect(JSON.parse(content)).toEqual({
+      completedInit: true,
+      acceptedTos: false,
+    });
     expect(fs.existsSync(APPDATA_DIR)).toBe(true);
   });
 });
@@ -99,7 +102,7 @@ describe("copyConfigs", () => {
 
     const dest = fs.readFileSync(
       path.join(CONFIGS_DIR, ".claude", "settings.json"),
-      "utf-8"
+      "utf-8",
     );
     expect(dest).toBe('{"k":"v"}');
   });
@@ -112,7 +115,7 @@ describe("copyConfigs", () => {
 
     const dest = fs.readFileSync(
       path.join(CONFIGS_DIR, ".claude.json"),
-      "utf-8"
+      "utf-8",
     );
     expect(dest).toBe('{"test":true}');
   });

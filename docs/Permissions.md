@@ -9,6 +9,7 @@ Configuration storage location: `~/.code-container/configs`
 Settings file location: `.opencode/opencode.json`
 
 Add the following properties:
+
 ```json
 {
   "permission": "allow"
@@ -20,6 +21,7 @@ Add the following properties:
 Config file location: `.codex/config.toml`
 
 Add the following lines:
+
 ```toml
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
@@ -30,13 +32,11 @@ sandbox_mode = "danger-full-access"
 Settings file location: `.claude/settings.json`
 
 Add the following properties:
+
 ```json
 {
   "permissions": {
-    "allow": [
-      "*",
-      "Bash"
-    ]
+    "allow": ["*", "Bash"]
   }
 }
 ```
@@ -46,19 +46,21 @@ Add the following properties:
 Gemini uses a "policy engine" to determine tool usage approvals. To bypass permissions, perform the following:
 
 1. Navigte to the configuration storage location if not already:
-    ```bash
-    cd ~/.code-container/configs
-    ```
+
+   ```bash
+   cd ~/.code-container/configs
+   ```
 
 2. Create the policies directory if it doesn't already exist:
-    ```bash
-    mkdir -p .gemini/policies
-    ```
+
+   ```bash
+   mkdir -p .gemini/policies
+   ```
 
 3. Create a rule file at `.gemini/policies/rules.toml` with the following contents:
-    ```toml
-    [[rule]]
-    toolName = ["run_shell_command", "write_file", "replace"]
-    decision = "allow"
-    priority = 777
-    ```
+   ```toml
+   [[rule]]
+   toolName = ["run_shell_command", "write_file", "replace"]
+   decision = "allow"
+   priority = 777
+   ```

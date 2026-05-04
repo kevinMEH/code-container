@@ -66,11 +66,7 @@ import {
   removeContainersById,
 } from "../src/docker";
 import { loadSettings, saveSettings, copyConfigs } from "../src/config";
-import {
-  promptYesNo,
-  printSuccess,
-  printWarning,
-} from "../src/utils";
+import { promptYesNo, printSuccess, printWarning } from "../src/utils";
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -100,7 +96,7 @@ describe("init", () => {
     await init(true);
     expect(copyConfigs).toHaveBeenCalled();
     expect(saveSettings).toHaveBeenCalledWith(
-      expect.objectContaining({ completedInit: true })
+      expect.objectContaining({ completedInit: true }),
     );
   });
 
@@ -162,7 +158,7 @@ describe("runContainer", () => {
     await runContainer(projectPath);
     expect(execInteractive).toHaveBeenCalledWith(
       "container-test-abc12345",
-      "test-project"
+      "test-project",
     );
     expect(createNewContainer).not.toHaveBeenCalled();
     expect(startContainer).not.toHaveBeenCalled();
@@ -182,7 +178,7 @@ describe("runContainer", () => {
       "container-test-abc12345",
       "test-project",
       projectPath,
-      []
+      [],
     );
     expect(execInteractive).toHaveBeenCalled();
   });
@@ -209,7 +205,7 @@ describe("runContainer", () => {
       "container-test-abc12345",
       "test-project",
       projectPath,
-      ["-p", "8080:80"]
+      ["-p", "8080:80"],
     );
   });
 });

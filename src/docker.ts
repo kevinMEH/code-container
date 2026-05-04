@@ -11,14 +11,18 @@ export const IMAGE_NAME = "code-container";
 export const IMAGE_TAG = "latest";
 export const BASE_IMAGE = "code-container-base";
 const PACKAGED_DOCKERFILE = path.resolve(__dirname, "..", "Dockerfile");
-const PACKAGED_USER_DOCKERFILE = path.resolve(__dirname, "..", "Dockerfile.User");
+const PACKAGED_USER_DOCKERFILE = path.resolve(
+  __dirname,
+  "..",
+  "Dockerfile.User",
+);
 const CONTAINER_PREFIX = "container";
 
 export function checkDocker(): void {
   const result = spawnSync("docker", ["info"], { stdio: "pipe" });
   if (result.status !== 0) {
     printError(
-      "Docker is not available. Please install Docker: https://docs.docker.com/get-docker/"
+      "Docker is not available. Please install Docker: https://docs.docker.com/get-docker/",
     );
     process.exit(1);
   }
@@ -47,7 +51,7 @@ export function imageExists(): boolean {
   const result = spawnSync(
     "docker",
     ["image", "inspect", `${IMAGE_NAME}:${IMAGE_TAG}`],
-    { stdio: "pipe" }
+    { stdio: "pipe" },
   );
   return result.status === 0;
 }
@@ -56,12 +60,12 @@ export function ensureDockerfile(): void {
   if (!fs.existsSync(USER_DOCKERFILE_PATH)) {
     if (fs.existsSync(PACKAGED_USER_DOCKERFILE)) {
       printInfo(
-        `Dockerfile.User not found at ${USER_DOCKERFILE_PATH}, copying from package...`
+        `Dockerfile.User not found at ${USER_DOCKERFILE_PATH}, copying from package...`,
       );
       fs.copyFileSync(PACKAGED_USER_DOCKERFILE, USER_DOCKERFILE_PATH);
     } else {
       throw new Error(
-        `Dockerfile.User not found at ${USER_DOCKERFILE_PATH} and no packaged Dockerfile.User available`
+        `Dockerfile.User not found at ${USER_DOCKERFILE_PATH} and no packaged Dockerfile.User available`,
       );
     }
   }
@@ -70,8 +74,16 @@ export function ensureDockerfile(): void {
 export function buildImageRaw(): boolean {
   const baseResult = spawnSync(
     "docker",
-    ["build", "--no-cache", "-t", `${BASE_IMAGE}:${IMAGE_TAG}`, "-f", PACKAGED_DOCKERFILE, APPDATA_DIR],
-    { stdio: "inherit" }
+    [
+      "build",
+      "--no-cache",
+      "-t",
+      `${BASE_IMAGE}:${IMAGE_TAG}`,
+      "-f",
+      PACKAGED_DOCKERFILE,
+      APPDATA_DIR,
+    ],
+    { stdio: "inherit" },
   );
   if (baseResult.status !== 0) return false;
 
@@ -79,8 +91,16 @@ export function buildImageRaw(): boolean {
 
   const userResult = spawnSync(
     "docker",
-    ["build", "--no-cache", "-f", USER_DOCKERFILE_PATH, "-t", `${IMAGE_NAME}:${IMAGE_TAG}`, APPDATA_DIR],
-    { stdio: "inherit" }
+    [
+      "build",
+      "--no-cache",
+      "-f",
+      USER_DOCKERFILE_PATH,
+      "-t",
+      `${IMAGE_NAME}:${IMAGE_TAG}`,
+      APPDATA_DIR,
+    ],
+    { stdio: "inherit" },
   );
   return userResult.status === 0;
 }
@@ -96,7 +116,7 @@ export function containerRunning(containerName: string): boolean {
   const result = spawnSync(
     "docker",
     ["container", "inspect", "-f", "{{.State.Running}}", containerName],
-    { stdio: "pipe" }
+    { stdio: "pipe" },
   );
   return result.status === 0 && result.stdout.toString().trim() === "true";
 }
@@ -117,7 +137,7 @@ export function createNewContainer(
   containerName: string,
   projectName: string,
   projectPath: string,
-  cliFlags: string[] = []
+  cliFlags: string[] = [],
 ): boolean {
   const mounts = getMounts(projectPath, projectName);
   const args = ["run", "-d", "--name", containerName];
@@ -144,7 +164,7 @@ export function createNewContainer(
 
 export function execInteractive(
   containerName: string,
-  projectName: string
+  projectName: string,
 ): void {
   const flags = loadFlags();
   spawnSync(
@@ -162,13 +182,13 @@ export function execInteractive(
       containerName,
       "/bin/bash",
     ],
-    { stdio: "inherit" }
+    { stdio: "inherit" },
   );
 }
 
 export function getOtherSessionCount(
   containerName: string,
-  projectName: string
+  projectName: string,
 ): number {
   const result = spawnSync("ps", ["ax", "-o", "command="], {
     encoding: "utf-8",
@@ -195,14 +215,14 @@ export function getOtherSessionCount(
 
 export function stopContainerIfLastSession(
   containerName: string,
-  projectName: string
+  projectName: string,
 ): void {
   const otherSessions = getOtherSessionCount(containerName, projectName);
   if (otherSessions === 0) {
     stopContainer(containerName);
   } else {
     printInfo(
-      `Skipping stop; ${otherSessions} other terminal(s) still attached`
+      `Skipping stop; ${otherSessions} other terminal(s) still attached`,
     );
   }
 }
@@ -218,7 +238,7 @@ export function listContainersRaw(): void {
       "--format",
       "table {{.Names}}\t{{.Status}}\t{{.CreatedAt}}",
     ],
-    { stdio: "inherit" }
+    { stdio: "inherit" },
   );
 }
 
@@ -234,7 +254,7 @@ export function getStoppedContainerIds(): string[] {
       "status=exited",
       "--quiet",
     ],
-    { encoding: "utf8" }
+    { encoding: "utf8" },
   );
 
   const containerIds = result.stdout.trim();

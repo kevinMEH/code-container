@@ -16,26 +16,29 @@
 ### Installation
 
 1. `container` is available as a NPM package. To install, simply run:
-    ```bash
-    npm install -g code-container
-    ```
+
+   ```bash
+   npm install -g code-container
+   ```
 
 2. Then run the following to copy all your AI harness configs from `~/` to `~/.code-container/configs` for mounting onto the container.
-    ```bash
-    container init
-    ```
-    Alternatively, you can copy configs manually:
-    - `~/.config/opencode` → `~/.code-container/configs/.opencode`
-    - `~/.codex` → `~/.code-container/configs/.codex`
-    - `~/.copilot` → `~/.code-container/configs/.copilot`
-    - `~/.claude` → `~/.code-container/configs/.claude`
-    - `~/.claude.json` → `~/.code-container/configs/.claude.json`
-    - `~/.gemini` → `~/.code-container/configs/.gemini`
+
+   ```bash
+   container init
+   ```
+
+   Alternatively, you can copy configs manually:
+   - `~/.config/opencode` → `~/.code-container/configs/.opencode`
+   - `~/.codex` → `~/.code-container/configs/.codex`
+   - `~/.copilot` → `~/.code-container/configs/.copilot`
+   - `~/.claude` → `~/.code-container/configs/.claude`
+   - `~/.claude.json` → `~/.code-container/configs/.claude.json`
+   - `~/.gemini` → `~/.code-container/configs/.gemini`
 
 3. Finally, build the Docker image. This may take up to 5 minutes.
-    ```bash
-    container build
-    ```
+   ```bash
+   container build
+   ```
 
 You're done 🎉; `container` is now ready to use.
 
@@ -43,6 +46,7 @@ You're done 🎉; `container` is now ready to use.
 
 > [!Note]
 > Are you still on the shell script version of `container`? Migrate to the NPM package by running the following:
+>
 > ```bash
 > # Exit all containers & save important work...
 > npm install -g code-container
@@ -50,8 +54,8 @@ You're done 🎉; `container` is now ready to use.
 > bash scripts/cleanup.sh     # Optional: Cleanup config files
 > container build
 > ```
-> Note: Ensure that all work is saved and the container is ready for deletion. Containers from the previous version are not compatible with containers from the current version.
 >
+> Note: Ensure that all work is saved and the container is ready for deletion. Containers from the previous version are not compatible with containers from the current version.
 
 ### Try Nitro
 
@@ -64,12 +68,14 @@ npm install -g @aerovato/nitro
 ## Usage
 
 Navigate to any project and run `container` to mount project and enter container.
+
 ```bash
 cd /path/to/your/project
 container                    # Enter container
 ```
 
 Inside the container: Start your harness and develop like normal.
+
 ```bash
 opencode                     # Start OpenCode
 npm install <package>        # Persists per container
@@ -96,17 +102,20 @@ container init             # Copy/recopy config files
 ### Unhindered Agents
 
 > Don't want to configure manually? Clone this repo and ask your harness to configure for you.
+>
 > ```
 > Please configure all my container harnesses to run without permissions.
 > ```
 
 Destructive actions are localized inside containers.
+
 - You can let your harness run with full permissions
 - To configure your harness to run without permissions, see [`Permissions.md`](docs/Permissions.md).
 
 ### Customization
 
 > Don't want to customize manually? Clone this repo and ask your harness to customize for you.
+>
 > ```
 > Add the following packages to the container environment: ...
 > Add the following Docker flags to the container environment: ...
@@ -163,6 +172,7 @@ Each line is parsed like a shell command. Empty lines and lines starting with `#
 - **Caution:** Network access is still available; information may still be exfiltrated over network
 
 #### ⚠️ Security Advisory:
+
 - The main purpose of `container` is to protect commands like `rm` or `apt` from unintentionally affecting your system.
   - `container` assumes that your agent is acting in good faith.
 - `container` does not protect from prompt injections or network exfiltration in the event that an agent becomes malaligned.
@@ -188,8 +198,10 @@ You and multiple agents can work on the same project simultaneously.
 ## Uninstalling
 
 To uninstall `container`, uninstall the NPM package and remove `~/.code-container`:
+
 ```bash
 npm uninstall -g code-container
 rm -rf ~/.code-container
 ```
+
 Warning: Consider backing up the harness configurations in `~/.code-container/configs` before removing.

@@ -35,7 +35,7 @@ describe("loadMounts", () => {
     fs.writeFileSync(MOUNTS_PATH, `${coreMount}\n`);
 
     const mounts = loadMounts();
-    const occurrences = mounts.filter(m => m === coreMount).length;
+    const occurrences = mounts.filter((m) => m === coreMount).length;
     expect(occurrences).toBe(1);
   });
 
@@ -45,7 +45,7 @@ describe("loadMounts", () => {
 
     const mounts = loadMounts();
     expect(mounts).toContain("/valid:/mount");
-    expect(mounts.find(m => m.includes("comment"))).toBeUndefined();
+    expect(mounts.find((m) => m.includes("comment"))).toBeUndefined();
   });
 
   it("trims whitespace from mount lines", () => {
