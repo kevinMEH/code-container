@@ -55,7 +55,7 @@ describe("loadSettings", () => {
 describe("saveSettings", () => {
   it("writes settings as JSON and creates appdata dir", () => {
     saveSettings({ completedInit: true, acceptedTos: false });
-    const content = fs.readFileSync(SETTINGS_PATH, "utf-8");
+    const content = fs.readFileSync(SETTINGS_PATH, "utf-8") as string;
     expect(JSON.parse(content)).toEqual({
       completedInit: true,
       acceptedTos: false,
@@ -77,7 +77,9 @@ describe("ensureConfigDir", () => {
     ensureConfigDir();
     const claudeJsonPath = path.join(CONFIGS_DIR, ".claude.json");
     expect(fs.existsSync(claudeJsonPath)).toBe(true);
-    expect(JSON.parse(fs.readFileSync(claudeJsonPath, "utf-8"))).toEqual({});
+    expect(
+      JSON.parse(fs.readFileSync(claudeJsonPath, "utf-8") as string),
+    ).toEqual({});
   });
 
   it("does not overwrite existing .claude.json", () => {
@@ -85,7 +87,9 @@ describe("ensureConfigDir", () => {
     const claudeJsonPath = path.join(CONFIGS_DIR, ".claude.json");
     fs.writeFileSync(claudeJsonPath, '{"existing": true}');
     ensureConfigDir();
-    expect(JSON.parse(fs.readFileSync(claudeJsonPath, "utf-8"))).toEqual({
+    expect(
+      JSON.parse(fs.readFileSync(claudeJsonPath, "utf-8") as string),
+    ).toEqual({
       existing: true,
     });
   });

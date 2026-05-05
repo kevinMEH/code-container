@@ -15,7 +15,7 @@
   "scripts": {
     "build": "tsc && chmod u+x dist/main.js",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --project tsconfig.test.json",
     "test": "vitest run",
     "start": "node dist/main.js",
     "lint": "eslint .",

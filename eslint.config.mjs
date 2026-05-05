@@ -5,6 +5,6 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    ignores: ["dist/", "node_modules/", "__mocks__/"],
+    ignores: ["dist/", "node_modules/", "__mocks__/", "scripts/*.js"],
   },
 );
