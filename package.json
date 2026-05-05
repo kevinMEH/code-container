@@ -20,6 +20,7 @@
     "start": "node dist/main.js",
     "lint": "eslint .",
     "format": "prettier --write --ignore-unknown .",
+    "precommit": "bash scripts/precommit.sh",
     "prepare": "husky",
     "postinstall": "node scripts/postinstall.js",
     "publish-latest": "npm run clean && npm run build && npm publish",
