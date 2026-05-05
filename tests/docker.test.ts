@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { spawnSync } from "child_process";
 import {
   checkDocker,
   imageExists,
@@ -14,40 +13,25 @@ import {
 
 vi.mock("child_process");
 vi.mock("fs");
+vi.mock("../src/utils", () => ({
+  printInfo: vi.fn(),
+  printError: vi.fn(),
+  promptYesNo: vi.fn(),
+}));
 
-interface MockCall {
-  command: string;
-  args: string[] | undefined;
-  options?: unknown;
-}
-
-interface MockResult {
-  status: number;
-  stdout: string;
-  stderr: string;
-  signal?: unknown;
-  pid?: number;
-  output?: Array<Buffer | string | null>;
-}
-
-interface MockSpawnSync {
-  (command: string): MockResult;
-  __enqueue: (result: MockResult) => void;
-  __getCalls: () => MockCall[];
-  __reset: () => void;
-  __getQueueLength?: () => number;
-}
-
-const mockedSpawnSync = spawnSync as unknown as MockSpawnSync;
+import {
+  enqueue,
+  getCalls,
+  reset,
+  getQueueLength,
+} from "../__mocks__/child_process";
 
 beforeEach(() => {
-  mockedSpawnSync.__reset();
+  reset();
 });
 
 afterEach(() => {
-  const remainingQueue = mockedSpawnSync.__getQueueLength
-    ? mockedSpawnSync.__getQueueLength()
-    : 0;
+  const remainingQueue = getQueueLength();
   if (remainingQueue > 0) {
     throw new Error(
       `Test did not consume all mocked spawnSync responses. ${remainingQueue} remaining in queue.`,
@@ -57,7 +41,7 @@ afterEach(() => {
 
 describe("checkDocker", () => {
   it("does nothing when docker is available", () => {
-    mockedSpawnSync.__enqueue({ status: 0, stdout: "", stderr: "" });
+    enqueue({ status: 0, stdout: "", stderr: "" });
     const exitSpy = vi
       .spyOn(process, "exit")
       .mockImplementation((() => {}) as () => never);
@@ -67,7 +51,7 @@ describe("checkDocker", () => {
   });
 
   it("calls process.exit when docker is not available", () => {
-    mockedSpawnSync.__enqueue({ status: 1, stdout: "", stderr: "" });
+    enqueue({ status: 1, stdout: "", stderr: "" });
     const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("process.exit");
     });
@@ -79,53 +63,53 @@ describe("checkDocker", () => {
 
 describe("imageExists", () => {
   it("returns true when status is 0", () => {
-    mockedSpawnSync.__enqueue({ status: 0, stdout: "", stderr: "" });
+    enqueue({ status: 0, stdout: "", stderr: "" });
     expect(imageExists()).toBe(true);
   });
 
   it("returns false when status is non-zero", () => {
-    mockedSpawnSync.__enqueue({ status: 1, stdout: "", stderr: "" });
+    enqueue({ status: 1, stdout: "", stderr: "" });
     expect(imageExists()).toBe(false);
   });
 });
 
 describe("containerExists", () => {
   it("returns true when status is 0", () => {
-    mockedSpawnSync.__enqueue({ status: 0, stdout: "", stderr: "" });
+    enqueue({ status: 0, stdout: "", stderr: "" });
     expect(containerExists("container-foo-abc12345")).toBe(true);
   });
 
   it("returns false when status is non-zero", () => {
-    mockedSpawnSync.__enqueue({ status: 1, stdout: "", stderr: "" });
+    enqueue({ status: 1, stdout: "", stderr: "" });
     expect(containerExists("container-foo-abc12345")).toBe(false);
   });
 });
 
 describe("containerRunning", () => {
   it("returns true when status is 0 and stdout is 'true'", () => {
-    mockedSpawnSync.__enqueue({ status: 0, stdout: "true\n", stderr: "" });
+    enqueue({ status: 0, stdout: "true\n", stderr: "" });
     expect(containerRunning("container-foo-abc12345")).toBe(true);
   });
 
   it("returns false when status is 0 but stdout is 'false'", () => {
-    mockedSpawnSync.__enqueue({ status: 0, stdout: "false\n", stderr: "" });
+    enqueue({ status: 0, stdout: "false\n", stderr: "" });
     expect(containerRunning("container-foo-abc12345")).toBe(false);
   });
 
   it("returns false when status is non-zero", () => {
-    mockedSpawnSync.__enqueue({ status: 1, stdout: "", stderr: "" });
+    enqueue({ status: 1, stdout: "", stderr: "" });
     expect(containerRunning("container-foo-abc12345")).toBe(false);
   });
 });
 
 describe("getOtherSessionCount", () => {
   it("returns 0 when ps fails", () => {
-    mockedSpawnSync.__enqueue({ status: 1, stdout: "", stderr: "" });
+    enqueue({ status: 1, stdout: "", stderr: "" });
     expect(getOtherSessionCount("container-foo-abc12345", "foo")).toBe(0);
   });
 
   it("counts matching docker exec sessions", () => {
-    mockedSpawnSync.__enqueue({
+    enqueue({
       status: 0,
       stdout:
         "docker exec -it -w /root/foo container-foo-abc12345 /bin/bash\n" +
@@ -137,7 +121,7 @@ describe("getOtherSessionCount", () => {
   });
 
   it("does not count non-matching sessions", () => {
-    mockedSpawnSync.__enqueue({
+    enqueue({
       status: 0,
       stdout:
         "docker exec -it -w /root/bar container-bar-xyz /bin/bash\n" +
@@ -150,22 +134,22 @@ describe("getOtherSessionCount", () => {
 
 describe("stopContainerIfLastSession", () => {
   it("calls stopContainer when no other sessions", () => {
-    mockedSpawnSync.__enqueue({ status: 0, stdout: "unrelated\n", stderr: "" });
-    mockedSpawnSync.__enqueue({ status: 0, stdout: "", stderr: "" });
+    enqueue({ status: 0, stdout: "unrelated\n", stderr: "" });
+    enqueue({ status: 0, stdout: "", stderr: "" });
     stopContainerIfLastSession("container-foo-abc12345", "foo");
-    const calls = mockedSpawnSync.__getCalls();
+    const calls = getCalls();
     const stopCall = calls.find((c) => c.args && c.args[0] === "stop");
     expect(stopCall).toBeDefined();
   });
 
   it("skips stop when other sessions exist", () => {
-    mockedSpawnSync.__enqueue({
+    enqueue({
       status: 0,
       stdout: "docker exec -it -w /root/foo container-foo-abc12345 /bin/bash\n",
       stderr: "",
     });
     stopContainerIfLastSession("container-foo-abc12345", "foo");
-    const calls = mockedSpawnSync.__getCalls();
+    const calls = getCalls();
     const stopCall = calls.find((c) => c.args && c.args[0] === "stop");
     expect(stopCall).toBeUndefined();
   });
@@ -173,10 +157,10 @@ describe("stopContainerIfLastSession", () => {
 
 describe("createNewContainer", () => {
   it("constructs correct docker run arguments", () => {
-    mockedSpawnSync.__enqueue({ status: 0, stdout: "", stderr: "" });
+    enqueue({ status: 0, stdout: "", stderr: "" });
     createNewContainer("container-foo-abc12345", "foo", "/home/user/foo");
 
-    const calls = mockedSpawnSync.__getCalls();
+    const calls = getCalls();
     const runCall = calls[calls.length - 1];
     expect(runCall.command).toBe("docker");
     expect(runCall.args![0]).toBe("run");
@@ -197,35 +181,35 @@ describe("createNewContainer", () => {
   });
 
   it("includes cliFlags in the argument list", () => {
-    mockedSpawnSync.__enqueue({ status: 0, stdout: "", stderr: "" });
+    enqueue({ status: 0, stdout: "", stderr: "" });
     createNewContainer("container-foo-abc12345", "foo", "/home/user/foo", [
       "-p",
       "8080:80",
     ]);
 
-    const calls = mockedSpawnSync.__getCalls();
+    const calls = getCalls();
     const runCall = calls[calls.length - 1];
     expect(runCall.args).toContain("-p");
     expect(runCall.args).toContain("8080:80");
   });
 
   it("returns true on success", () => {
-    mockedSpawnSync.__enqueue({ status: 0, stdout: "", stderr: "" });
+    enqueue({ status: 0, stdout: "", stderr: "" });
     expect(createNewContainer("c", "p", "/path")).toBe(true);
   });
 
   it("includes COLORTERM environment variable", () => {
-    mockedSpawnSync.__enqueue({ status: 0, stdout: "", stderr: "" });
+    enqueue({ status: 0, stdout: "", stderr: "" });
     createNewContainer("container-foo-abc12345", "foo", "/home/user/foo");
 
-    const calls = mockedSpawnSync.__getCalls();
+    const calls = getCalls();
     const runCall = calls[calls.length - 1];
     expect(runCall.args).toContain("-e");
     expect(runCall.args).toContain("COLORTERM=truecolor");
   });
 
   it("returns false on failure", () => {
-    mockedSpawnSync.__enqueue({ status: 1, stdout: "", stderr: "" });
+    enqueue({ status: 1, stdout: "", stderr: "" });
     expect(createNewContainer("c", "p", "/path")).toBe(false);
   });
 });
@@ -253,22 +237,22 @@ describe("generateContainerName", () => {
 
 describe("getStoppedContainerIds", () => {
   it("returns empty array when no stopped containers", () => {
-    mockedSpawnSync.__enqueue({ status: 0, stdout: "", stderr: "" });
+    enqueue({ status: 0, stdout: "", stderr: "" });
     expect(getStoppedContainerIds()).toEqual([]);
   });
 
   it("returns empty array for whitespace-only output", () => {
-    mockedSpawnSync.__enqueue({ status: 0, stdout: "   \n\t  ", stderr: "" });
+    enqueue({ status: 0, stdout: "   \n\t  ", stderr: "" });
     expect(getStoppedContainerIds()).toEqual([]);
   });
 
   it("parses single container ID", () => {
-    mockedSpawnSync.__enqueue({ status: 0, stdout: "abc123\n", stderr: "" });
+    enqueue({ status: 0, stdout: "abc123\n", stderr: "" });
     expect(getStoppedContainerIds()).toEqual(["abc123"]);
   });
 
   it("parses multiple container IDs", () => {
-    mockedSpawnSync.__enqueue({
+    enqueue({
       status: 0,
       stdout: "abc123\ndef456\nghi789\n",
       stderr: "",

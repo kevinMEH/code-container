@@ -1,9 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import fs from "fs";
 
-vi.mock("fs", () => ({
-  existsSync: vi.fn(() => true),
-  statSync: vi.fn(() => ({ isDirectory: () => true })),
-}));
+vi.mock("fs", () => {
+  const existsSync = vi.fn(() => true);
+  const statSync = vi.fn(() => ({ isDirectory: () => true }));
+  return {
+    default: { existsSync, statSync },
+    existsSync,
+    statSync,
+  };
+});
 
 vi.mock("child_process");
 
@@ -148,8 +154,7 @@ describe("runContainer", () => {
   const projectPath = "/home/user/test-project";
 
   it("exits when project path does not exist", async () => {
-    const { existsSync } = await import("fs");
-    vi.mocked(existsSync).mockReturnValueOnce(false);
+    vi.mocked(fs.existsSync).mockReturnValueOnce(false);
     const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("process.exit");
     });
