@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { spawnSync } from "child_process";
 import {
   checkDocker,
@@ -8,6 +8,8 @@ import {
   getOtherSessionCount,
   stopContainerIfLastSession,
   createNewContainer,
+  generateContainerName,
+  getStoppedContainerIds,
 } from "../src/docker";
 
 vi.mock("child_process");
@@ -33,15 +35,24 @@ interface MockSpawnSync {
   __enqueue: (result: MockResult) => void;
   __getCalls: () => MockCall[];
   __reset: () => void;
+  __getQueueLength?: () => number;
 }
 
 const mockedSpawnSync = spawnSync as unknown as MockSpawnSync;
 
 beforeEach(() => {
-  if (mockedSpawnSync.__reset === undefined) {
-    throw new Error("spawnSync mock not applied.");
-  }
   mockedSpawnSync.__reset();
+});
+
+afterEach(() => {
+  const remainingQueue = mockedSpawnSync.__getQueueLength
+    ? mockedSpawnSync.__getQueueLength()
+    : 0;
+  if (remainingQueue > 0) {
+    throw new Error(
+      `Test did not consume all mocked spawnSync responses. ${remainingQueue} remaining in queue.`,
+    );
+  }
 });
 
 describe("checkDocker", () => {
@@ -203,8 +214,65 @@ describe("createNewContainer", () => {
     expect(createNewContainer("c", "p", "/path")).toBe(true);
   });
 
+  it("includes COLORTERM environment variable", () => {
+    mockedSpawnSync.__enqueue({ status: 0, stdout: "", stderr: "" });
+    createNewContainer("container-foo-abc12345", "foo", "/home/user/foo");
+
+    const calls = mockedSpawnSync.__getCalls();
+    const runCall = calls[calls.length - 1];
+    expect(runCall.args).toContain("-e");
+    expect(runCall.args).toContain("COLORTERM=truecolor");
+  });
+
   it("returns false on failure", () => {
     mockedSpawnSync.__enqueue({ status: 1, stdout: "", stderr: "" });
     expect(createNewContainer("c", "p", "/path")).toBe(false);
+  });
+});
+
+describe("generateContainerName", () => {
+  it("strips trailing slash from path", () => {
+    const resultWithSlash = generateContainerName("/home/user/project/");
+    const resultWithoutSlash = generateContainerName("/home/user/project");
+    expect(resultWithSlash).toBe(resultWithoutSlash);
+    expect(resultWithSlash).toMatch(/^container-project-[a-f0-9]{8}$/);
+  });
+
+  it("generates consistent hash for same path", () => {
+    const result1 = generateContainerName("/home/user/myproject");
+    const result2 = generateContainerName("/home/user/myproject");
+    expect(result1).toBe(result2);
+  });
+
+  it("generates different hashes for different paths", () => {
+    const result1 = generateContainerName("/home/user/project1");
+    const result2 = generateContainerName("/home/user/project2");
+    expect(result1).not.toBe(result2);
+  });
+});
+
+describe("getStoppedContainerIds", () => {
+  it("returns empty array when no stopped containers", () => {
+    mockedSpawnSync.__enqueue({ status: 0, stdout: "", stderr: "" });
+    expect(getStoppedContainerIds()).toEqual([]);
+  });
+
+  it("returns empty array for whitespace-only output", () => {
+    mockedSpawnSync.__enqueue({ status: 0, stdout: "   \n\t  ", stderr: "" });
+    expect(getStoppedContainerIds()).toEqual([]);
+  });
+
+  it("parses single container ID", () => {
+    mockedSpawnSync.__enqueue({ status: 0, stdout: "abc123\n", stderr: "" });
+    expect(getStoppedContainerIds()).toEqual(["abc123"]);
+  });
+
+  it("parses multiple container IDs", () => {
+    mockedSpawnSync.__enqueue({
+      status: 0,
+      stdout: "abc123\ndef456\nghi789\n",
+      stderr: "",
+    });
+    expect(getStoppedContainerIds()).toEqual(["abc123", "def456", "ghi789"]);
   });
 });

@@ -124,6 +124,36 @@ describe("copyConfigs", () => {
     expect(dest).toBe('{"test":true}');
   });
 
+  it("copies nested directory structure recursively", () => {
+    fs.mkdirSync(path.join(home, ".codex", "subdir", "nested"), {
+      recursive: true,
+    });
+    fs.writeFileSync(path.join(home, ".codex", "root.txt"), "root");
+    fs.writeFileSync(path.join(home, ".codex", "subdir", "mid.txt"), "mid");
+    fs.writeFileSync(
+      path.join(home, ".codex", "subdir", "nested", "deep.txt"),
+      "deep",
+    );
+
+    copyConfigs();
+
+    expect(
+      fs.readFileSync(path.join(CONFIGS_DIR, ".codex", "root.txt"), "utf-8"),
+    ).toBe("root");
+    expect(
+      fs.readFileSync(
+        path.join(CONFIGS_DIR, ".codex", "subdir", "mid.txt"),
+        "utf-8",
+      ),
+    ).toBe("mid");
+    expect(
+      fs.readFileSync(
+        path.join(CONFIGS_DIR, ".codex", "subdir", "nested", "deep.txt"),
+        "utf-8",
+      ),
+    ).toBe("deep");
+  });
+
   it("skips non-existent sources without error", () => {
     copyConfigs();
   });

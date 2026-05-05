@@ -22,4 +22,8 @@ spawnSync.__reset = function () {
   queue.length = 0;
 };
 
+spawnSync.__getQueueLength = function () {
+  return queue.length;
+};
+
 module.exports = { spawnSync };

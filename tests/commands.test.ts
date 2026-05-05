@@ -66,7 +66,12 @@ import {
   removeContainersById,
 } from "../src/docker";
 import { loadSettings, saveSettings, copyConfigs } from "../src/config";
-import { promptYesNo, printSuccess, printWarning } from "../src/utils";
+import {
+  printInfo,
+  printSuccess,
+  printWarning,
+  promptYesNo,
+} from "../src/utils";
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -273,15 +278,22 @@ describe("listContainers", () => {
 });
 
 describe("cleanContainers", () => {
-  it("does nothing when no stopped containers", () => {
+  it("prints info and returns when no stopped containers", () => {
     vi.mocked(getStoppedContainerIds).mockReturnValueOnce([]);
     cleanContainers();
+    expect(getStoppedContainerIds).toHaveBeenCalled();
     expect(removeContainersById).not.toHaveBeenCalled();
+    expect(printInfo).toHaveBeenCalledWith(
+      expect.stringContaining("No stopped"),
+    );
   });
 
-  it("removes stopped containers", () => {
+  it("removes stopped containers and prints success", () => {
     vi.mocked(getStoppedContainerIds).mockReturnValueOnce(["abc123", "def456"]);
     cleanContainers();
+    expect(getStoppedContainerIds).toHaveBeenCalled();
     expect(removeContainersById).toHaveBeenCalledWith(["abc123", "def456"]);
+    expect(removeContainersById).toHaveBeenCalledTimes(1);
+    expect(printSuccess).toHaveBeenCalledWith("Cleanup complete");
   });
 });
