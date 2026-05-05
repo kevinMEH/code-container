@@ -1,4 +1,4 @@
-import * as fs from "fs";
+import fs from "fs";
 import { parse } from "shell-quote";
 
 import { FLAGS_PATH, RUN_FLAGS_PATH } from "./config";

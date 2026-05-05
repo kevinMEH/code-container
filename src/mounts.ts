@@ -1,5 +1,5 @@
-import * as fs from "fs";
-import * as os from "os";
+import fs from "fs";
+import os from "os";
 import { CONFIGS_DIR, MOUNTS_PATH, ensureAppdataDir } from "./config";
 import { printInfo, promptYesNo } from "./utils";
 

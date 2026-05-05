@@ -1,6 +1,6 @@
-import * as path from "path";
-import * as fs from "fs";
-import * as os from "os";
+import path from "path";
+import fs from "fs";
+import os from "os";
 import { z } from "zod";
 
 export const APPDATA_DIR = path.join(os.homedir(), ".code-container");

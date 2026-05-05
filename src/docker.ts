@@ -1,7 +1,7 @@
 import { spawnSync } from "child_process";
-import * as path from "path";
-import * as fs from "fs";
-import * as crypto from "crypto";
+import path from "path";
+import fs from "fs";
+import crypto from "crypto";
 import { printInfo, printError } from "./utils";
 import { APPDATA_DIR, USER_DOCKERFILE_PATH } from "./config";
 import { loadMounts } from "./mounts";
