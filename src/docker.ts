@@ -5,7 +5,7 @@ import * as crypto from "crypto";
 import { printInfo, printError } from "./utils";
 import { APPDATA_DIR, USER_DOCKERFILE_PATH } from "./config";
 import { loadMounts } from "./mounts";
-import { loadFlags, loadRunFlags } from "./flags";
+import { loadFlags, FlagSource } from "./flags";
 
 export const IMAGE_NAME = "code-container";
 export const IMAGE_TAG = "latest";
@@ -150,8 +150,8 @@ export function createNewContainer(
     args.push("-v", mount);
   }
 
-  const flags = loadFlags();
-  const runFlags = loadRunFlags();
+  const flags = loadFlags(FlagSource.Common);
+  const runFlags = loadFlags(FlagSource.Run);
   args.push(...flags);
   args.push(...runFlags);
   args.push(...cliFlags);
@@ -166,7 +166,7 @@ export function execInteractive(
   containerName: string,
   projectName: string,
 ): void {
-  const flags = loadFlags();
+  const flags = loadFlags(FlagSource.Common);
   spawnSync(
     "docker",
     [
