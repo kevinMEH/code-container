@@ -1,11 +1,6 @@
 #!/usr/bin/env node
 
-import {
-  printError,
-  printInfo,
-  promptYesNo,
-  resolveProjectPath,
-} from "./utils";
+import { printInfo, promptYesNo, resolveProjectPath } from "./utils";
 import {
   buildImage,
   runContainer,
@@ -18,6 +13,7 @@ import {
 import { checkDocker } from "./docker";
 import { loadSettings, saveSettings } from "./config";
 import { ensureMountsFile } from "./mounts";
+import { parseArgs } from "./args";
 
 const TOS = `
 \x1b[33m⚠️  Security Advisory:\x1b[0m
@@ -60,87 +56,8 @@ async function ensureTosAccepted(): Promise<boolean> {
   return false;
 }
 
-function usage(): void {
-  console.log(`
-Usage: container [COMMAND] [PROJECT_PATH] [-- DOCKER_FLAGS...]
-
-Manage Code containers for isolated project environments.
-
-Commands:
-    (none)         Start container for current directory (default)
-    run            Start container for specified project path
-    build          Build the Docker image
-    init           Copy config files from home directory
-    stop           Stop the container for this project
-    remove         Remove the container for this project
-    list           List all Code containers
-    clean          Remove all stopped Code containers
-
-Arguments:
-    PROJECT_PATH    Path to the project directory (defaults to current directory)
-    DOCKER_FLAGS    Additional flags passed to 'docker run' after '--'
-
-Examples:
-    container                           # Start container for current directory
-    container run /path/to/project      # Start container for specific project
-    container run /path -- -p 8080:80   # Pass Docker flags for port mapping
-    container run -- -e FOO=bar         # Pass env vars (uses current directory)
-    container build                     # Build Docker image
-    container init                      # Copy config files
-    container stop                      # Stop container for current directory
-    container remove /path/to/project   # Remove container for specific project
-    container list                      # List all containers
-    container clean                     # Clean up stopped containers
-`);
-  process.exit(0);
-}
-
 async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  let command = "";
-  let projectPath = "";
-  let cliFlags: string[] = [];
-
-  if (args.length > 0) {
-    const firstArg = args[0];
-    if (firstArg === "help" || firstArg === "--help" || firstArg === "-h") {
-      usage();
-    }
-
-    const validCommands = [
-      "run",
-      "build",
-      "init",
-      "stop",
-      "remove",
-      "list",
-      "clean",
-    ];
-    if (validCommands.includes(firstArg)) {
-      command = firstArg;
-      const remainingArgs = args.slice(1);
-      const separatorIndex = remainingArgs.indexOf("--");
-
-      if (separatorIndex !== -1) {
-        const pathArgs = remainingArgs.slice(0, separatorIndex);
-        if (pathArgs.length > 1) {
-          printError(`Unexpected argument: ${pathArgs[1]}`);
-          usage();
-        }
-        projectPath = pathArgs[0] || "";
-        cliFlags = remainingArgs.slice(separatorIndex + 1);
-      } else {
-        projectPath = remainingArgs[0] || "";
-        if (remainingArgs.length > 1) {
-          printError(`Unexpected argument: ${remainingArgs[1]}`);
-          usage();
-        }
-      }
-    } else {
-      printError(`Unknown command: ${firstArg}`);
-      usage();
-    }
-  }
+  const parsed = parseArgs(process.argv.slice(2));
 
   if (!(await ensureTosAccepted())) {
     printInfo("Terms not accepted. Exiting...");
@@ -149,16 +66,15 @@ async function main(): Promise<void> {
 
   await ensureMountsFile();
 
-  if (command === "init") {
+  if (parsed.command === "init") {
     await init();
     return;
   }
 
   checkDocker();
   await init(true);
-  const resolvedPath = resolveProjectPath(projectPath);
 
-  switch (command) {
+  switch (parsed.command) {
     case "list":
       listContainers();
       return;
@@ -166,18 +82,23 @@ async function main(): Promise<void> {
       cleanContainers();
       return;
     case "build":
-      buildImage();
+      buildImage(parsed.target);
       return;
-    case "stop":
-      stopContainerForProject(resolvedPath);
+    case "stop": {
+      const resolved = resolveProjectPath(parsed.projectPath);
+      stopContainerForProject(resolved);
       return;
-    case "remove":
-      removeContainerForProject(resolvedPath);
+    }
+    case "remove": {
+      const resolved = resolveProjectPath(parsed.projectPath);
+      removeContainerForProject(resolved);
       return;
-    case "run":
-    case "":
-      await runContainer(resolvedPath, cliFlags);
+    }
+    case "run": {
+      const resolved = resolveProjectPath(parsed.projectPath);
+      await runContainer(resolved, parsed.cliFlags);
       return;
+    }
   }
 }
 

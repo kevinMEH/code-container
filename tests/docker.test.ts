@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import path from "path";
+import os from "os";
+import fs, { vol } from "memfs";
 import {
   checkDocker,
   imageExists,
@@ -9,10 +12,11 @@ import {
   createNewContainer,
   generateContainerName,
   getStoppedContainerIds,
+  buildImageRaw,
 } from "../src/docker";
 
-vi.mock("child_process");
 vi.mock("fs");
+vi.mock("child_process");
 vi.mock("../src/utils", () => ({
   printInfo: vi.fn(),
   printError: vi.fn(),
@@ -28,6 +32,7 @@ import {
 
 beforeEach(() => {
   reset();
+  vol.reset();
 });
 
 afterEach(() => {
@@ -258,5 +263,305 @@ describe("getStoppedContainerIds", () => {
       stderr: "",
     });
     expect(getStoppedContainerIds()).toEqual(["abc123", "def456", "ghi789"]);
+  });
+});
+
+function enqueueSuccessfulBuilds(count: number): void {
+  for (let i = 0; i < count; i++) {
+    enqueue({ status: 0, stdout: "", stderr: "" });
+  }
+}
+
+function getBuildCalls(): Array<{
+  dockerfile: string;
+  tag: string;
+  args: string[];
+}> {
+  return getCalls()
+    .filter((c) => c.args && c.args[0] === "build")
+    .map((c) => {
+      const args = c.args!;
+      const fIdx = args.indexOf("-f");
+      const tIdx = args.indexOf("-t");
+      return {
+        dockerfile: fIdx !== -1 ? args[fIdx + 1] : "",
+        tag: tIdx !== -1 ? args[tIdx + 1] : "",
+        args: [...args],
+      };
+    });
+}
+
+describe("buildImageRaw", () => {
+  const resourcesDir = path.resolve(__dirname, "..", "resources");
+  const coreDockerfile = path.join(resourcesDir, "Dockerfile.Core");
+  const harnessDockerfile = path.join(resourcesDir, "Dockerfile.Harness");
+
+  function seedPackagedDockerfiles(): void {
+    vol.fromJSON(
+      {
+        "Dockerfile.Core": "FROM ubuntu:24.04",
+        "Dockerfile.Harness": "FROM code-container-packages:latest",
+        "Dockerfile.Packages": "FROM code-container-core:latest",
+        "Dockerfile.User": "FROM code-container-base:latest",
+      },
+      resourcesDir,
+    );
+  }
+
+  function seedUserDockerfiles(): void {
+    const appdataDir = path.join(os.homedir(), ".code-container");
+    vol.fromJSON(
+      {
+        "Dockerfile.Packages": "FROM code-container-core:latest",
+        "Dockerfile.User": "FROM code-container-base:latest",
+      },
+      appdataDir,
+    );
+  }
+
+  function seedAllDockerfiles(): void {
+    seedPackagedDockerfiles();
+    seedUserDockerfiles();
+  }
+
+  describe("full target", () => {
+    it("builds all 4 stages", () => {
+      seedAllDockerfiles();
+      enqueueSuccessfulBuilds(4);
+      const result = buildImageRaw("full");
+      expect(result).toBe(true);
+
+      const builds = getBuildCalls();
+      expect(builds).toHaveLength(4);
+    });
+
+    it("passes --no-cache to every stage", () => {
+      seedAllDockerfiles();
+      enqueueSuccessfulBuilds(4);
+      buildImageRaw("full");
+
+      const builds = getBuildCalls();
+      for (const build of builds) {
+        expect(build.args).toContain("--no-cache");
+      }
+    });
+
+    it("uses correct dockerfile and tag for each stage", () => {
+      seedAllDockerfiles();
+      enqueueSuccessfulBuilds(4);
+      buildImageRaw("full");
+
+      const builds = getBuildCalls();
+      expect(builds[0].dockerfile).toBe(coreDockerfile);
+      expect(builds[0].tag).toBe("code-container-core:latest");
+
+      expect(builds[1].dockerfile).toContain("Dockerfile.Packages");
+      expect(builds[1].tag).toBe("code-container-packages:latest");
+
+      expect(builds[2].dockerfile).toBe(harnessDockerfile);
+      expect(builds[2].tag).toBe("code-container-base:latest");
+
+      expect(builds[3].dockerfile).toContain("Dockerfile.User");
+      expect(builds[3].tag).toBe("code-container:latest");
+    });
+
+    it("uses APPDATA_DIR as build context for every stage", () => {
+      seedAllDockerfiles();
+      enqueueSuccessfulBuilds(4);
+      buildImageRaw("full");
+
+      const builds = getBuildCalls();
+      for (const build of builds) {
+        expect(build.args[build.args.length - 1]).toContain(".code-container");
+      }
+    });
+  });
+
+  describe("packages target", () => {
+    it("builds 3 stages (packages, harness, user)", () => {
+      seedAllDockerfiles();
+      enqueueSuccessfulBuilds(3);
+      const result = buildImageRaw("packages");
+      expect(result).toBe(true);
+
+      const builds = getBuildCalls();
+      expect(builds).toHaveLength(3);
+      expect(builds[0].tag).toBe("code-container-packages:latest");
+      expect(builds[1].tag).toBe("code-container-base:latest");
+      expect(builds[2].tag).toBe("code-container:latest");
+    });
+
+    it("does not build core stage", () => {
+      seedAllDockerfiles();
+      enqueueSuccessfulBuilds(3);
+      buildImageRaw("packages");
+
+      const builds = getBuildCalls();
+      const coreBuild = builds.find((b) => b.dockerfile === coreDockerfile);
+      expect(coreBuild).toBeUndefined();
+    });
+  });
+
+  describe("harness target", () => {
+    it("builds 2 stages (harness, user)", () => {
+      seedAllDockerfiles();
+      enqueueSuccessfulBuilds(2);
+      const result = buildImageRaw("harness");
+      expect(result).toBe(true);
+
+      const builds = getBuildCalls();
+      expect(builds).toHaveLength(2);
+      expect(builds[0].tag).toBe("code-container-base:latest");
+      expect(builds[1].tag).toBe("code-container:latest");
+    });
+
+    it("does not build core or packages stages", () => {
+      seedAllDockerfiles();
+      enqueueSuccessfulBuilds(2);
+      buildImageRaw("harness");
+
+      const builds = getBuildCalls();
+      const coreBuild = builds.find((b) => b.dockerfile === coreDockerfile);
+      const packagesBuild = builds.find((b) =>
+        b.dockerfile.includes("Dockerfile.Packages"),
+      );
+      expect(coreBuild).toBeUndefined();
+      expect(packagesBuild).toBeUndefined();
+    });
+  });
+
+  describe("user target", () => {
+    it("builds only the user stage", () => {
+      seedAllDockerfiles();
+      enqueue({ status: 0, stdout: "", stderr: "" });
+      const result = buildImageRaw("user");
+      expect(result).toBe(true);
+
+      const builds = getBuildCalls();
+      expect(builds).toHaveLength(1);
+      expect(builds[0].tag).toBe("code-container:latest");
+      expect(builds[0].dockerfile).toContain("Dockerfile.User");
+    });
+  });
+
+  describe("failure handling", () => {
+    it("returns false when core stage fails", () => {
+      seedAllDockerfiles();
+      enqueue({ status: 1, stdout: "", stderr: "" });
+      expect(buildImageRaw("full")).toBe(false);
+      expect(getBuildCalls()).toHaveLength(1);
+    });
+
+    it("returns false when packages stage fails", () => {
+      seedAllDockerfiles();
+      enqueueSuccessfulBuilds(1);
+      enqueue({ status: 1, stdout: "", stderr: "" });
+      expect(buildImageRaw("full")).toBe(false);
+      expect(getBuildCalls()).toHaveLength(2);
+    });
+
+    it("returns false when harness stage fails", () => {
+      seedAllDockerfiles();
+      enqueueSuccessfulBuilds(2);
+      enqueue({ status: 1, stdout: "", stderr: "" });
+      expect(buildImageRaw("full")).toBe(false);
+      expect(getBuildCalls()).toHaveLength(3);
+    });
+
+    it("returns false when user stage fails", () => {
+      seedAllDockerfiles();
+      enqueueSuccessfulBuilds(3);
+      enqueue({ status: 1, stdout: "", stderr: "" });
+      expect(buildImageRaw("full")).toBe(false);
+      expect(getBuildCalls()).toHaveLength(4);
+    });
+
+    it("does not continue building after a failure", () => {
+      seedAllDockerfiles();
+      enqueue({ status: 1, stdout: "", stderr: "" });
+      buildImageRaw("full");
+      expect(getBuildCalls()).toHaveLength(1);
+    });
+
+    it("packages target fails at first stage", () => {
+      seedAllDockerfiles();
+      enqueue({ status: 1, stdout: "", stderr: "" });
+      expect(buildImageRaw("packages")).toBe(false);
+      expect(getBuildCalls()).toHaveLength(1);
+    });
+
+    it("harness target fails at first stage", () => {
+      seedAllDockerfiles();
+      enqueue({ status: 1, stdout: "", stderr: "" });
+      expect(buildImageRaw("harness")).toBe(false);
+      expect(getBuildCalls()).toHaveLength(1);
+    });
+
+    it("user target fails", () => {
+      seedAllDockerfiles();
+      enqueue({ status: 1, stdout: "", stderr: "" });
+      expect(buildImageRaw("user")).toBe(false);
+    });
+  });
+
+  describe("ensureUserDockerfile", () => {
+    it("copies Dockerfile.Packages from packaged source when missing", () => {
+      seedPackagedDockerfiles();
+      // @ts-expect-error memfs runtime has mkdirSync but types don't expose it
+      fs.mkdirSync(path.join(os.homedir(), ".code-container"), {
+        recursive: true,
+      });
+      enqueueSuccessfulBuilds(1);
+
+      buildImageRaw("packages");
+
+      expect(
+        // @ts-expect-error memfs runtime has existsSync but types don't expose it
+        fs.existsSync(
+          path.join(os.homedir(), ".code-container", "Dockerfile.Packages"),
+        ),
+      ).toBe(true);
+    });
+
+    it("copies Dockerfile.User from packaged source when missing", () => {
+      seedPackagedDockerfiles();
+      // @ts-expect-error memfs runtime has mkdirSync but types don't expose it
+      fs.mkdirSync(path.join(os.homedir(), ".code-container"), {
+        recursive: true,
+      });
+      enqueueSuccessfulBuilds(1);
+
+      buildImageRaw("user");
+
+      expect(
+        // @ts-expect-error memfs runtime has existsSync but types don't expose it
+        fs.existsSync(
+          path.join(os.homedir(), ".code-container", "Dockerfile.User"),
+        ),
+      ).toBe(true);
+    });
+
+    it("throws when user dockerfile and packaged source both missing", () => {
+      expect(() => buildImageRaw("user")).toThrow("Dockerfile not found");
+    });
+
+    it("does not copy when user dockerfile already exists", () => {
+      seedPackagedDockerfiles();
+      seedUserDockerfiles();
+      enqueueSuccessfulBuilds(1);
+
+      // @ts-expect-error memfs runtime has readFileSync but types don't expose it
+      const contentBefore = fs.readFileSync(
+        path.join(os.homedir(), ".code-container", "Dockerfile.User"),
+        "utf-8",
+      );
+      buildImageRaw("user");
+      // @ts-expect-error memfs runtime has readFileSync but types don't expose it
+      const contentAfter = fs.readFileSync(
+        path.join(os.homedir(), ".code-container", "Dockerfile.User"),
+        "utf-8",
+      );
+      expect(contentBefore).toBe(contentAfter);
+    });
   });
 });

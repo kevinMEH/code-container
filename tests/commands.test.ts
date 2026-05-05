@@ -84,10 +84,25 @@ beforeEach(() => {
 });
 
 describe("buildImage", () => {
-  it("prints success on build", () => {
-    buildImage();
-    expect(buildImageRaw).toHaveBeenCalled();
+  it("builds full target", () => {
+    buildImage("full");
+    expect(buildImageRaw).toHaveBeenCalledWith("full");
     expect(printSuccess).toHaveBeenCalled();
+  });
+
+  it("builds packages target", () => {
+    buildImage("packages");
+    expect(buildImageRaw).toHaveBeenCalledWith("packages");
+  });
+
+  it("builds harness target", () => {
+    buildImage("harness");
+    expect(buildImageRaw).toHaveBeenCalledWith("harness");
+  });
+
+  it("builds user target", () => {
+    buildImage("user");
+    expect(buildImageRaw).toHaveBeenCalledWith("user");
   });
 
   it("calls process.exit on build failure", () => {
@@ -95,8 +110,9 @@ describe("buildImage", () => {
       throw new Error("process.exit");
     });
     vi.mocked(buildImageRaw).mockReturnValueOnce(false);
-    expect(() => buildImage()).toThrow("process.exit");
+    expect(() => buildImage("full")).toThrow("process.exit");
     expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(buildImageRaw).toHaveBeenCalledWith("full");
     exitSpy.mockRestore();
   });
 });

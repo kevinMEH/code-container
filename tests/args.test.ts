@@ -1,0 +1,191 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+vi.mock("../src/utils", () => ({
+  printError: vi.fn(),
+}));
+
+import { parseArgs } from "../src/args";
+
+describe("parseArgs", () => {
+  let exitSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("process.exit");
+    });
+  });
+
+  afterEach(() => {
+    exitSpy.mockRestore();
+  });
+
+  describe("default (no args)", () => {
+    it("returns run with empty path", () => {
+      const result = parseArgs([]);
+      expect(result).toEqual({
+        command: "run",
+        projectPath: "",
+        cliFlags: [],
+      });
+    });
+  });
+
+  describe("help", () => {
+    it("exits on help", () => {
+      expect(() => parseArgs(["help"])).toThrow("process.exit");
+      expect(exitSpy).toHaveBeenCalledWith(0);
+    });
+
+    it("exits on --help", () => {
+      expect(() => parseArgs(["--help"])).toThrow("process.exit");
+      expect(exitSpy).toHaveBeenCalledWith(0);
+    });
+
+    it("exits on -h", () => {
+      expect(() => parseArgs(["-h"])).toThrow("process.exit");
+      expect(exitSpy).toHaveBeenCalledWith(0);
+    });
+  });
+
+  describe("unknown command", () => {
+    it("exits with error", () => {
+      expect(() => parseArgs(["foo"])).toThrow("process.exit");
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe("build", () => {
+    it("defaults to full target", () => {
+      expect(parseArgs(["build"])).toEqual({
+        command: "build",
+        target: "full",
+      });
+    });
+
+    it("parses explicit full target", () => {
+      expect(parseArgs(["build", "full"])).toEqual({
+        command: "build",
+        target: "full",
+      });
+    });
+
+    it("parses packages target", () => {
+      expect(parseArgs(["build", "packages"])).toEqual({
+        command: "build",
+        target: "packages",
+      });
+    });
+
+    it("parses harness target", () => {
+      expect(parseArgs(["build", "harness"])).toEqual({
+        command: "build",
+        target: "harness",
+      });
+    });
+
+    it("parses user target", () => {
+      expect(parseArgs(["build", "user"])).toEqual({
+        command: "build",
+        target: "user",
+      });
+    });
+
+    it("rejects invalid target", () => {
+      expect(() => parseArgs(["build", "invalid"])).toThrow("process.exit");
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe("run", () => {
+    it("parses with path only", () => {
+      expect(parseArgs(["run", "/path/to/project"])).toEqual({
+        command: "run",
+        projectPath: "/path/to/project",
+        cliFlags: [],
+      });
+    });
+
+    it("parses with path and docker flags", () => {
+      expect(
+        parseArgs(["run", "/path/to/project", "--", "-p", "8080:80"]),
+      ).toEqual({
+        command: "run",
+        projectPath: "/path/to/project",
+        cliFlags: ["-p", "8080:80"],
+      });
+    });
+
+    it("parses with only docker flags (empty path)", () => {
+      expect(parseArgs(["run", "--", "-e", "FOO=bar"])).toEqual({
+        command: "run",
+        projectPath: "",
+        cliFlags: ["-e", "FOO=bar"],
+      });
+    });
+
+    it("rejects extra positional args", () => {
+      expect(() => parseArgs(["run", "/path", "extra"])).toThrow(
+        "process.exit",
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe("stop", () => {
+    it("parses with path", () => {
+      expect(parseArgs(["stop", "/path/to/project"])).toEqual({
+        command: "stop",
+        projectPath: "/path/to/project",
+      });
+    });
+
+    it("parses with empty path", () => {
+      expect(parseArgs(["stop"])).toEqual({
+        command: "stop",
+        projectPath: "",
+      });
+    });
+
+    it("rejects extra args", () => {
+      expect(() => parseArgs(["stop", "a", "b"])).toThrow("process.exit");
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe("remove", () => {
+    it("parses with path", () => {
+      expect(parseArgs(["remove", "/path"])).toEqual({
+        command: "remove",
+        projectPath: "/path",
+      });
+    });
+  });
+
+  describe("init", () => {
+    it("parses init", () => {
+      expect(parseArgs(["init"])).toEqual({ command: "init" });
+    });
+
+    it("rejects extra args", () => {
+      expect(() => parseArgs(["init", "extra"])).toThrow("process.exit");
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe("list", () => {
+    it("parses list", () => {
+      expect(parseArgs(["list"])).toEqual({ command: "list" });
+    });
+
+    it("rejects extra args", () => {
+      expect(() => parseArgs(["list", "extra"])).toThrow("process.exit");
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe("clean", () => {
+    it("parses clean", () => {
+      expect(parseArgs(["clean"])).toEqual({ command: "clean" });
+    });
+  });
+});

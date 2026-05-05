@@ -89,10 +89,13 @@ Container state is saved. Next invocation resumes where you left off. AI convers
 ```bash
 container                  # Enter the container
 container run /path/to     # Enter container for specific project
+container build            # Build full Docker image (all stages)
+container build packages   # Rebuild from Packages stage
+container build harness    # Rebuild from Harness stage (update harnesses)
+container build user       # Rebuild User stage only (update your tooling)
 container list             # List all containers
 container stop             # Stop current project's container
-container remove            # Remove current project's container
-container build            # Build Docker image
+container remove           # Remove current project's container
 container clean            # Remove all stopped containers
 container init             # Copy/recopy config files
 ```
@@ -122,17 +125,42 @@ Destructive actions are localized inside containers.
 > Add a custom mount point to the container environment: ...
 > ```
 
-Easily add your own tooling & mount points.
+#### Docker Image
 
-**Adding tools/packages**: Edit `~/.code-container/Dockerfile.User` and rebuild:
+The image is built in 4 cascading stages:
+
+1. **Core** (packaged): Ubuntu 24.04, system dependencies, Node + NVM, Python
+2. **Packages** (customizable): Large user-specified packages & tooling
+3. **Harness** (packaged): OpenCode, Codex, Claude Code, etc.
+4. **User** (customizable): Small user-specified packages & setup scripts
+
+**Adding large packages and build tools**: Edit `~/.code-container/Dockerfile.Packages`:
 
 ```dockerfile
-FROM code-container-base:latest
+FROM code-container-core:latest
 
 RUN apt-get update && apt-get install -y postgresql-client redis-tools
 ```
 
-> **Deprecation Notice**: `~/.code-container/Dockerfile` is deprecated and no longer used. If you previously customized this file, migrate your custom `RUN` commands to `~/.code-container/Dockerfile.User`.
+**Adding user-level tools or setup scripts**: Edit `~/.code-container/Dockerfile.User`:
+
+```dockerfile
+FROM code-container-base:latest
+
+RUN npm install -g bun typescript
+RUN pip install requests
+
+RUN npx opencode plugin opencode-quotes-plugin -g
+```
+
+**After modifying:** Quickly rebuild use the appropriate build target:
+
+```bash
+container build packages   # Rebuild from Packages stage
+container build user       # Rebuild from User stage only (very fast)
+```
+
+#### Docker Entry
 
 **Adding mount points**: Edit `~/.code-container/MOUNTS.txt` and reinitialize containers:
 

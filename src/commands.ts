@@ -24,6 +24,7 @@ import {
   removeContainersById,
   IMAGE_NAME,
   IMAGE_TAG,
+  BuildTarget,
 } from "./docker";
 import {
   ensureConfigDir,
@@ -32,9 +33,9 @@ import {
   copyConfigs,
 } from "./config";
 
-export function buildImage(): void {
+export function buildImage(target: BuildTarget): void {
   printInfo(`Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}`);
-  if (!buildImageRaw()) {
+  if (!buildImageRaw(target)) {
     printError("Failed to build Docker image");
     process.exit(1);
   }
@@ -105,7 +106,7 @@ export async function runContainer(
 
   if (!imageExists()) {
     printWarning("Docker image not found. Building...");
-    buildImage();
+    buildImage("full");
   }
 
   if (containerRunning(containerName)) {

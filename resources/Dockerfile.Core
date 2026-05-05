@@ -1,16 +1,10 @@
-# Code Container
-# Generic Dockerfile for running coding tools in isolated project environments
-
 FROM ubuntu:24.04
 
-# Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Set timezone to America/New_York (EST)
 ENV TZ=America/New_York
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Install system dependencies and common build tools
 RUN apt-get update && apt-get install -y \
     build-essential \
     git \
@@ -43,22 +37,6 @@ RUN apt-get update \
 
 # Create python symlink pointing to python3
 RUN ln -sf /usr/bin/python3 /usr/bin/python
-
-# Install Claude Code globally via official installer
-RUN curl -fsSL https://claude.ai/install.sh | bash
-RUN echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-
-# Install Opencode
-RUN npm install -g opencode-ai
-
-# Install OpenAI Codex CLI
-RUN npm install -g @openai/codex
-
-# Install Gemini CLI
-RUN npm install -g @google/gemini-cli
-
-# Install GitHub Copilot CLI
-RUN npm install -g @github/copilot
 
 # Set working directory to root home
 WORKDIR /root
