@@ -1,5 +1,5 @@
-import * as path from "path";
-import * as fs from "fs";
+import path from "path";
+import fs from "fs";
 import {
   printInfo,
   printSuccess,
@@ -24,6 +24,7 @@ import {
   removeContainersById,
   IMAGE_NAME,
   IMAGE_TAG,
+  BuildTarget,
 } from "./docker";
 import {
   ensureConfigDir,
@@ -32,9 +33,9 @@ import {
   copyConfigs,
 } from "./config";
 
-export function buildImage(): void {
+export function buildImage(target: BuildTarget): void {
   printInfo(`Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}`);
-  if (!buildImageRaw()) {
+  if (!buildImageRaw(target)) {
     printError("Failed to build Docker image");
     process.exit(1);
   }
@@ -49,10 +50,10 @@ export async function init(isStartup: boolean = false): Promise<void> {
     if (!settings.completedInit) {
       printInfo("First run detected. Would you like to copy config files?");
       printInfo(
-        "This will copy your OpenCode, Codex, Claude Code, & Gemini CLI configs to ~/.code-container/configs for mounting."
+        "This will copy your OpenCode, Codex, Claude Code, & Gemini CLI configs to ~/.code-container/configs for mounting.",
       );
       printInfo(
-        "If you choose to not copy config files, you can still setup your harness once inside the container."
+        "If you choose to not copy config files, you can still setup your harness once inside the container.",
       );
 
       const shouldCopy = await promptYesNo("Copy config files?");
@@ -76,7 +77,7 @@ export async function init(isStartup: boolean = false): Promise<void> {
       saveSettings(settings);
     } else {
       printWarning(
-        "Config files already exist. This operation will merge and overwrite existing config files."
+        "Config files already exist. This operation will merge and overwrite existing config files.",
       );
       const shouldCopy = await promptYesNo("Continue?");
       if (shouldCopy) {
@@ -87,13 +88,16 @@ export async function init(isStartup: boolean = false): Promise<void> {
   }
 }
 
-export async function runContainer(projectPath: string, cliFlags: string[] = []): Promise<void> {
+export async function runContainer(
+  projectPath: string,
+  cliFlags: string[] = [],
+): Promise<void> {
   const containerName = generateContainerName(projectPath);
   const projectName = path.basename(projectPath);
 
   if (!fs.existsSync(projectPath) || !fs.statSync(projectPath).isDirectory()) {
     printError(
-      `Project directory does not exist or is not a directory: ${projectPath}`
+      `Project directory does not exist or is not a directory: ${projectPath}`,
     );
     process.exit(1);
   }
@@ -102,7 +106,7 @@ export async function runContainer(projectPath: string, cliFlags: string[] = [])
 
   if (!imageExists()) {
     printWarning("Docker image not found. Building...");
-    buildImage();
+    buildImage("full");
   }
 
   if (containerRunning(containerName)) {

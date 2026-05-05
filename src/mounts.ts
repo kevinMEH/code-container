@@ -1,5 +1,5 @@
-import * as fs from "fs";
-import * as os from "os";
+import fs from "fs";
+import os from "os";
 import { CONFIGS_DIR, MOUNTS_PATH, ensureAppdataDir } from "./config";
 import { printInfo, promptYesNo } from "./utils";
 
@@ -32,13 +32,13 @@ export async function ensureMountsFile(): Promise<void> {
   printInfo("");
   printInfo("Would you like to mount ~/.ssh (read-only)?");
   printInfo(
-    "  Pros: Enables SSH-based git operations and remote server access inside the container. (E.g.: git push, git pull)"
+    "  Pros: Enables SSH-based git operations and remote server access inside the container. (E.g.: git push, git pull)",
   );
   printInfo(
-    "  Risks: Exposes your SSH private keys. Only enable if you trust the code running in your containers."
+    "  Risks: Exposes your SSH private keys. Only enable if you trust the code running in your containers.",
   );
   printInfo(
-    "  Note: This configuration is global. You may modify your mounts at any time by editing ~/.code-container/MOUNTS.txt."
+    "  Note: This configuration is global. You may modify your mounts at any time by editing ~/.code-container/MOUNTS.txt.",
   );
 
   const mountSsh = await promptYesNo("Mount ~/.ssh?");
@@ -49,7 +49,9 @@ export async function ensureMountsFile(): Promise<void> {
   fs.writeFileSync(MOUNTS_PATH, mounts.join("\n") + "\n", { mode: 0o600 });
   printInfo("");
   printInfo(`Created ${MOUNTS_PATH}`);
-  printInfo("Core mounts are always applied. Modify this file to store additional mount points.");
+  printInfo(
+    "Core mounts are always applied. Modify this file to store additional mount points.",
+  );
 }
 
 export function loadMounts(): string[] {
@@ -60,8 +62,8 @@ export function loadMounts(): string[] {
     const content = fs.readFileSync(MOUNTS_PATH, "utf-8");
     const extraMounts = content
       .split("\n")
-      .map(line => line.trim())
-      .filter(line => line && !line.startsWith("#"));
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#"));
     for (const mount of extraMounts) {
       mountSet.add(mount);
     }

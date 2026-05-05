@@ -1,24 +1,78 @@
 import { spawnSync } from "child_process";
-import * as path from "path";
-import * as fs from "fs";
-import * as crypto from "crypto";
+import path from "path";
+import fs from "fs";
+import crypto from "crypto";
 import { printInfo, printError } from "./utils";
-import { APPDATA_DIR, USER_DOCKERFILE_PATH } from "./config";
+import {
+  APPDATA_DIR,
+  USER_DOCKERFILE_PATH,
+  PACKAGES_DOCKERFILE_PATH,
+} from "./config";
 import { loadMounts } from "./mounts";
-import { loadFlags, loadRunFlags } from "./flags";
+import { loadFlags, FlagSource } from "./flags";
 
 export const IMAGE_NAME = "code-container";
 export const IMAGE_TAG = "latest";
-export const BASE_IMAGE = "code-container-base";
-const PACKAGED_DOCKERFILE = path.resolve(__dirname, "..", "Dockerfile");
-const PACKAGED_USER_DOCKERFILE = path.resolve(__dirname, "..", "Dockerfile.User");
+const CORE_IMAGE = "code-container-core";
+const PACKAGES_IMAGE = "code-container-packages";
+const BASE_IMAGE = "code-container-base";
+export type BuildTarget = "full" | "packages" | "harness" | "user";
+
+const RESOURCES_DIR = path.resolve(__dirname, "..", "resources");
+const CORE_DOCKERFILE = path.join(RESOURCES_DIR, "Dockerfile.Core");
+const HARNESS_DOCKERFILE = path.join(RESOURCES_DIR, "Dockerfile.Harness");
+const PACKAGED_PACKAGES_DOCKERFILE = path.join(
+  RESOURCES_DIR,
+  "Dockerfile.Packages",
+);
+const PACKAGED_USER_DOCKERFILE = path.join(RESOURCES_DIR, "Dockerfile.User");
+
+interface BuildStage {
+  dockerfile: string;
+  tag: string;
+  isUserFile: boolean;
+  packagedSource?: string;
+}
+
+const BUILD_STAGES: BuildStage[] = [
+  {
+    dockerfile: CORE_DOCKERFILE,
+    tag: CORE_IMAGE,
+    isUserFile: false,
+  },
+  {
+    dockerfile: PACKAGES_DOCKERFILE_PATH,
+    tag: PACKAGES_IMAGE,
+    isUserFile: true,
+    packagedSource: PACKAGED_PACKAGES_DOCKERFILE,
+  },
+  {
+    dockerfile: HARNESS_DOCKERFILE,
+    tag: BASE_IMAGE,
+    isUserFile: false,
+  },
+  {
+    dockerfile: USER_DOCKERFILE_PATH,
+    tag: IMAGE_NAME,
+    isUserFile: true,
+    packagedSource: PACKAGED_USER_DOCKERFILE,
+  },
+];
+
+const BUILD_START_INDEX: Record<BuildTarget, number> = {
+  full: 0,
+  packages: 1,
+  harness: 2,
+  user: 3,
+};
+
 const CONTAINER_PREFIX = "container";
 
 export function checkDocker(): void {
   const result = spawnSync("docker", ["info"], { stdio: "pipe" });
   if (result.status !== 0) {
     printError(
-      "Docker is not available. Please install Docker: https://docs.docker.com/get-docker/"
+      "Docker is not available. Please install Docker: https://docs.docker.com/get-docker/",
     );
     process.exit(1);
   }
@@ -47,42 +101,52 @@ export function imageExists(): boolean {
   const result = spawnSync(
     "docker",
     ["image", "inspect", `${IMAGE_NAME}:${IMAGE_TAG}`],
-    { stdio: "pipe" }
+    { stdio: "pipe" },
   );
   return result.status === 0;
 }
 
-export function ensureDockerfile(): void {
-  if (!fs.existsSync(USER_DOCKERFILE_PATH)) {
-    if (fs.existsSync(PACKAGED_USER_DOCKERFILE)) {
-      printInfo(
-        `Dockerfile.User not found at ${USER_DOCKERFILE_PATH}, copying from package...`
-      );
-      fs.copyFileSync(PACKAGED_USER_DOCKERFILE, USER_DOCKERFILE_PATH);
+function ensureUserDockerfile(filePath: string, packagedSource: string): void {
+  if (!fs.existsSync(filePath)) {
+    if (fs.existsSync(packagedSource)) {
+      printInfo(`Dockerfile not found at ${filePath}, copying from package...`);
+      fs.copyFileSync(packagedSource, filePath);
     } else {
       throw new Error(
-        `Dockerfile.User not found at ${USER_DOCKERFILE_PATH} and no packaged Dockerfile.User available`
+        `Dockerfile not found at ${filePath} and no packaged default available`,
       );
     }
   }
 }
 
-export function buildImageRaw(): boolean {
-  const baseResult = spawnSync(
-    "docker",
-    ["build", "--no-cache", "-t", `${BASE_IMAGE}:${IMAGE_TAG}`, "-f", PACKAGED_DOCKERFILE, APPDATA_DIR],
-    { stdio: "inherit" }
-  );
-  if (baseResult.status !== 0) return false;
+export function buildImageRaw(target: BuildTarget): boolean {
+  const startIndex = BUILD_START_INDEX[target];
 
-  ensureDockerfile();
+  for (let i = startIndex; i < BUILD_STAGES.length; i++) {
+    const stage = BUILD_STAGES[i];
+    printInfo(`Building: ${stage.tag}`);
 
-  const userResult = spawnSync(
-    "docker",
-    ["build", "--no-cache", "-f", USER_DOCKERFILE_PATH, "-t", `${IMAGE_NAME}:${IMAGE_TAG}`, APPDATA_DIR],
-    { stdio: "inherit" }
-  );
-  return userResult.status === 0;
+    if (stage.isUserFile && stage.packagedSource) {
+      ensureUserDockerfile(stage.dockerfile, stage.packagedSource);
+    }
+
+    const result = spawnSync(
+      "docker",
+      [
+        "build",
+        "--no-cache",
+        "-t",
+        `${stage.tag}:${IMAGE_TAG}`,
+        "-f",
+        stage.dockerfile,
+        APPDATA_DIR,
+      ],
+      { stdio: "inherit" },
+    );
+    if (result.status !== 0) return false;
+  }
+
+  return true;
 }
 
 export function containerExists(containerName: string): boolean {
@@ -96,7 +160,7 @@ export function containerRunning(containerName: string): boolean {
   const result = spawnSync(
     "docker",
     ["container", "inspect", "-f", "{{.State.Running}}", containerName],
-    { stdio: "pipe" }
+    { stdio: "pipe" },
   );
   return result.status === 0 && result.stdout.toString().trim() === "true";
 }
@@ -117,7 +181,7 @@ export function createNewContainer(
   containerName: string,
   projectName: string,
   projectPath: string,
-  cliFlags: string[] = []
+  cliFlags: string[] = [],
 ): boolean {
   const mounts = getMounts(projectPath, projectName);
   const args = ["run", "-d", "--name", containerName];
@@ -130,8 +194,8 @@ export function createNewContainer(
     args.push("-v", mount);
   }
 
-  const flags = loadFlags();
-  const runFlags = loadRunFlags();
+  const flags = loadFlags(FlagSource.Common);
+  const runFlags = loadFlags(FlagSource.Run);
   args.push(...flags);
   args.push(...runFlags);
   args.push(...cliFlags);
@@ -144,9 +208,9 @@ export function createNewContainer(
 
 export function execInteractive(
   containerName: string,
-  projectName: string
+  projectName: string,
 ): void {
-  const flags = loadFlags();
+  const flags = loadFlags(FlagSource.Common);
   spawnSync(
     "docker",
     [
@@ -162,13 +226,13 @@ export function execInteractive(
       containerName,
       "/bin/bash",
     ],
-    { stdio: "inherit" }
+    { stdio: "inherit" },
   );
 }
 
 export function getOtherSessionCount(
   containerName: string,
-  projectName: string
+  projectName: string,
 ): number {
   const result = spawnSync("ps", ["ax", "-o", "command="], {
     encoding: "utf-8",
@@ -195,14 +259,14 @@ export function getOtherSessionCount(
 
 export function stopContainerIfLastSession(
   containerName: string,
-  projectName: string
+  projectName: string,
 ): void {
   const otherSessions = getOtherSessionCount(containerName, projectName);
   if (otherSessions === 0) {
     stopContainer(containerName);
   } else {
     printInfo(
-      `Skipping stop; ${otherSessions} other terminal(s) still attached`
+      `Skipping stop; ${otherSessions} other terminal(s) still attached`,
     );
   }
 }
@@ -218,7 +282,7 @@ export function listContainersRaw(): void {
       "--format",
       "table {{.Names}}\t{{.Status}}\t{{.CreatedAt}}",
     ],
-    { stdio: "inherit" }
+    { stdio: "inherit" },
   );
 }
 
@@ -234,7 +298,7 @@ export function getStoppedContainerIds(): string[] {
       "status=exited",
       "--quiet",
     ],
-    { encoding: "utf8" }
+    { encoding: "utf8" },
   );
 
   const containerIds = result.stdout.trim();

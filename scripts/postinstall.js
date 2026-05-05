@@ -6,8 +6,14 @@ const os = require("os");
 
 const APPDATA_DIR = path.join(os.homedir(), ".code-container");
 const CONFIGS_DIR = path.join(APPDATA_DIR, "configs");
+const RESOURCES_DIR = path.join(__dirname, "..", "resources");
 const USER_DOCKERFILE_PATH = path.join(APPDATA_DIR, "Dockerfile.User");
-const PACKAGED_USER_DOCKERFILE = path.join(__dirname, "..", "Dockerfile.User");
+const PACKAGED_USER_DOCKERFILE = path.join(RESOURCES_DIR, "Dockerfile.User");
+const PACKAGES_DOCKERFILE_PATH = path.join(APPDATA_DIR, "Dockerfile.Packages");
+const PACKAGED_PACKAGES_DOCKERFILE = path.join(
+  RESOURCES_DIR,
+  "Dockerfile.Packages",
+);
 const FLAGS_PATH = path.join(APPDATA_DIR, "DOCKER_FLAGS.txt");
 const RUN_FLAGS_PATH = path.join(APPDATA_DIR, "DOCKER_RUN_FLAGS.txt");
 
@@ -23,12 +29,22 @@ if (!fs.existsSync(USER_DOCKERFILE_PATH)) {
   fs.copyFileSync(PACKAGED_USER_DOCKERFILE, USER_DOCKERFILE_PATH);
 }
 
+if (!fs.existsSync(PACKAGES_DOCKERFILE_PATH)) {
+  fs.copyFileSync(PACKAGED_PACKAGES_DOCKERFILE, PACKAGES_DOCKERFILE_PATH);
+}
+
 if (!fs.existsSync(FLAGS_PATH)) {
-  fs.writeFileSync(FLAGS_PATH, "# Add custom Docker flags here (one per line)\n# Note: These flags are passed to every created container and every exec session.\n# Use DOCKER_RUN_FLAGS.txt for flags that only apply to 'docker run'.\n");
+  fs.writeFileSync(
+    FLAGS_PATH,
+    "# Add custom Docker flags here (one per line)\n# Note: These flags are passed to every created container and every exec session.\n# Use DOCKER_RUN_FLAGS.txt for flags that only apply to 'docker run'.\n",
+  );
 }
 
 if (!fs.existsSync(RUN_FLAGS_PATH)) {
-  fs.writeFileSync(RUN_FLAGS_PATH, "# Add Docker run-only flags here (one per line)\n# Note: These flags are only passed to 'docker run', not 'docker exec'.\n# Use this for flags like -v, --network, --restart that are not valid for exec.\n");
+  fs.writeFileSync(
+    RUN_FLAGS_PATH,
+    "# Add Docker run-only flags here (one per line)\n# Note: These flags are only passed to 'docker run', not 'docker exec'.\n# Use this for flags like -v, --network, --restart that are not valid for exec.\n",
+  );
 }
 
 // --- Migration: Remove stale core mounts from MOUNTS.txt ---
@@ -52,18 +68,20 @@ const STALE_CONTAINER_PATHS = [
 if (fs.existsSync(MOUNTS_PATH)) {
   const content = fs.readFileSync(MOUNTS_PATH, "utf-8");
   const lines = content.split("\n");
-  const cleaned = lines.filter(line => {
+  const cleaned = lines.filter((line) => {
     // Filter out all lines with target location in STALE_CONTAINER_PATHS
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) return true;
     const parts = trimmed.split(":");
     const containerPath = parts.length >= 2 ? parts[1] : null;
-    return containerPath === null || !STALE_CONTAINER_PATHS.includes(containerPath);
+    return (
+      containerPath === null || !STALE_CONTAINER_PATHS.includes(containerPath)
+    );
   });
   const cleanedContent = cleaned.join("\n");
   if (cleanedContent !== content) {
     fs.writeFileSync(MOUNTS_PATH, cleanedContent, { mode: 0o600 });
-    console.log("Note: Removed outdated core mounts from MOUNTS.txt")
+    console.log("Note: Removed outdated core mounts from MOUNTS.txt");
   }
 }
 // --- End Migration ---
