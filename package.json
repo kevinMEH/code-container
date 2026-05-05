@@ -23,7 +23,8 @@
     "prepare": "husky",
     "postinstall": "node scripts/postinstall.js",
     "publish-latest": "npm run clean && npm run build && npm publish",
-    "publish-nightly": "npm run clean && npm run build && npm publish --tag nightly"
+    "publish-nightly": "npm run clean && npm run build && npm publish --tag nightly",
+    "install-local": "npm run clean && npm run build && npm link"
   },
   "author": "kevinMEH",
   "license": "MIT",
