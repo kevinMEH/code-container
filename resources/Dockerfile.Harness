@@ -1,12 +1,34 @@
 FROM code-container-packages:latest
 
-RUN curl -fsSL https://claude.ai/install.sh | bash
-RUN echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+ARG INSTALL_CLAUDE=false
+ARG INSTALL_OPENCODE=false
+ARG INSTALL_CODEX=false
+ARG INSTALL_GEMINI=false
+ARG INSTALL_COPILOT=false
 
-RUN npm install -g opencode-ai
+ARG CONTAINER_USER=developer
 
-RUN npm install -g @openai/codex
+RUN if [ "$INSTALL_CLAUDE" = "true" ]; then \
+      curl -fsSL https://claude.ai/install.sh | bash && \
+      cp /root/.local/bin/claude /usr/local/bin/claude 2>/dev/null; \
+      cp /root/.local/bin/claude-code /usr/local/bin/claude-code 2>/dev/null; \
+    fi
 
-RUN npm install -g @google/gemini-cli
+RUN if [ "$INSTALL_OPENCODE" = "true" ]; then \
+      npm install -g opencode-ai; \
+    fi
 
-RUN npm install -g @github/copilot
+RUN if [ "$INSTALL_CODEX" = "true" ]; then \
+      npm install -g @openai/codex; \
+    fi
+
+RUN if [ "$INSTALL_GEMINI" = "true" ]; then \
+      npm install -g @google/gemini-cli; \
+    fi
+
+RUN if [ "$INSTALL_COPILOT" = "true" ]; then \
+      npm install -g @github/copilot; \
+    fi
+
+# Ensure developer user has CLI tools in PATH
+RUN echo 'export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"' >> /home/$CONTAINER_USER/.bashrc

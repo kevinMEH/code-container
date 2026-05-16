@@ -7,6 +7,7 @@ import {
   APPDATA_DIR,
   USER_DOCKERFILE_PATH,
   PACKAGES_DOCKERFILE_PATH,
+  HARNESS_LIST,
 } from "./config";
 import { loadMounts } from "./mounts";
 import { loadFlags, FlagSource } from "./flags";
@@ -68,6 +69,14 @@ const BUILD_START_INDEX: Record<BuildTarget, number> = {
   user: 3,
 };
 
+const HARNESS_BUILD_ARGS: Record<string, string> = {
+  "claude-code": "INSTALL_CLAUDE",
+  opencode: "INSTALL_OPENCODE",
+  codex: "INSTALL_CODEX",
+  gemini: "INSTALL_GEMINI",
+  copilot: "INSTALL_COPILOT",
+};
+
 const CONTAINER_PREFIX = "container";
 
 export function checkDocker(): void {
@@ -125,6 +134,7 @@ export function buildImageRaw(
   target: BuildTarget,
   uid: number,
   gid: number,
+  harnesses: string[],
 ): boolean {
   const startIndex = BUILD_START_INDEX[target];
 
@@ -148,6 +158,19 @@ export function buildImageRaw(
     if (i === 0) {
       dockerArgs.push("--build-arg", `CONTAINER_UID=${uid}`);
       dockerArgs.push("--build-arg", `CONTAINER_GID=${gid}`);
+    }
+
+    if (i === 2) {
+      dockerArgs.push("--build-arg", `CONTAINER_USER=${CONTAINER_USER}`);
+      for (const harness of HARNESS_LIST) {
+        const argName = HARNESS_BUILD_ARGS[harness];
+        if (argName) {
+          dockerArgs.push(
+            "--build-arg",
+            `${argName}=${harnesses.includes(harness) ? "true" : "false"}`,
+          );
+        }
+      }
     }
 
     dockerArgs.push(APPDATA_DIR);

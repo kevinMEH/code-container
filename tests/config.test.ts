@@ -26,6 +26,7 @@ describe("loadSettings", () => {
     expect(settings.acceptedTos).toBe(false);
     expect(settings.containerUid).toBe(1000);
     expect(settings.containerGid).toBe(1000);
+    expect(settings.selectedHarnesses).toEqual([]);
   });
 
   it("returns parsed settings from valid JSON", () => {
@@ -37,6 +38,7 @@ describe("loadSettings", () => {
         acceptedTos: true,
         containerUid: 1001,
         containerGid: 1002,
+        selectedHarnesses: ["opencode", "codex"],
       }),
     );
     expect(loadSettings()).toEqual({
@@ -44,6 +46,7 @@ describe("loadSettings", () => {
       acceptedTos: true,
       containerUid: 1001,
       containerGid: 1002,
+      selectedHarnesses: ["opencode", "codex"],
     });
   });
 
@@ -54,6 +57,7 @@ describe("loadSettings", () => {
     expect(settings.completedInit).toBe(true);
     expect(settings.containerUid).toBe(1000);
     expect(settings.containerGid).toBe(1000);
+    expect(settings.selectedHarnesses).toEqual([]);
   });
 
   it("throws on invalid JSON", () => {
@@ -79,6 +83,7 @@ describe("saveSettings", () => {
       acceptedTos: false,
       containerUid: 1000,
       containerGid: 1000,
+      selectedHarnesses: ["opencode"],
     });
     const content = fs.readFileSync(SETTINGS_PATH, "utf-8") as string;
     expect(JSON.parse(content)).toEqual({
@@ -86,6 +91,7 @@ describe("saveSettings", () => {
       acceptedTos: false,
       containerUid: 1000,
       containerGid: 1000,
+      selectedHarnesses: ["opencode"],
     });
     expect(fs.existsSync(APPDATA_DIR)).toBe(true);
   });
