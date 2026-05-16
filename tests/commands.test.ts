@@ -34,7 +34,12 @@ vi.mock("../src/docker", () => ({
 
 vi.mock("../src/config", () => ({
   ensureConfigDir: vi.fn(),
-  loadSettings: vi.fn(() => ({ completedInit: false, acceptedTos: false })),
+  loadSettings: vi.fn(() => ({
+    completedInit: false,
+    acceptedTos: false,
+    containerUid: 1000,
+    containerGid: 1000,
+  })),
   saveSettings: vi.fn(),
   copyConfigs: vi.fn(),
 }));
@@ -86,23 +91,23 @@ beforeEach(() => {
 describe("buildImage", () => {
   it("builds full target", () => {
     buildImage("full");
-    expect(buildImageRaw).toHaveBeenCalledWith("full");
+    expect(buildImageRaw).toHaveBeenCalledWith("full", 1000, 1000);
     expect(printSuccess).toHaveBeenCalled();
   });
 
   it("builds packages target", () => {
     buildImage("packages");
-    expect(buildImageRaw).toHaveBeenCalledWith("packages");
+    expect(buildImageRaw).toHaveBeenCalledWith("packages", 1000, 1000);
   });
 
   it("builds harness target", () => {
     buildImage("harness");
-    expect(buildImageRaw).toHaveBeenCalledWith("harness");
+    expect(buildImageRaw).toHaveBeenCalledWith("harness", 1000, 1000);
   });
 
   it("builds user target", () => {
     buildImage("user");
-    expect(buildImageRaw).toHaveBeenCalledWith("user");
+    expect(buildImageRaw).toHaveBeenCalledWith("user", 1000, 1000);
   });
 
   it("calls process.exit on build failure", () => {
@@ -112,7 +117,7 @@ describe("buildImage", () => {
     vi.mocked(buildImageRaw).mockReturnValueOnce(false);
     expect(() => buildImage("full")).toThrow("process.exit");
     expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(buildImageRaw).toHaveBeenCalledWith("full");
+    expect(buildImageRaw).toHaveBeenCalledWith("full", 1000, 1000);
     exitSpy.mockRestore();
   });
 });
@@ -138,6 +143,8 @@ describe("init", () => {
     vi.mocked(loadSettings).mockReturnValueOnce({
       completedInit: true,
       acceptedTos: false,
+      containerUid: 1000,
+      containerGid: 1000,
     });
     await init(true);
     expect(promptYesNo).not.toHaveBeenCalled();
@@ -149,6 +156,8 @@ describe("init", () => {
     vi.mocked(loadSettings).mockReturnValueOnce({
       completedInit: false,
       acceptedTos: false,
+      containerUid: 1000,
+      containerGid: 1000,
     });
     await init(false);
     expect(copyConfigs).toHaveBeenCalled();
@@ -159,6 +168,8 @@ describe("init", () => {
     vi.mocked(loadSettings).mockReturnValueOnce({
       completedInit: true,
       acceptedTos: false,
+      containerUid: 1000,
+      containerGid: 1000,
     });
     vi.mocked(promptYesNo).mockResolvedValueOnce(true);
     await init(false);

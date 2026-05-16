@@ -28,6 +28,8 @@ export const SHARED_DIRS = [
 const SettingsSchema = z.object({
   completedInit: z.boolean().default(false),
   acceptedTos: z.boolean().default(false),
+  containerUid: z.number().default(1000),
+  containerGid: z.number().default(1000),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;
@@ -42,7 +44,12 @@ export function ensureAppdataDir(): void {
 
 export function loadSettings(): Settings {
   if (!fs.existsSync(SETTINGS_PATH)) {
-    return { completedInit: false, acceptedTos: false };
+    return {
+      completedInit: false,
+      acceptedTos: false,
+      containerUid: 1000,
+      containerGid: 1000,
+    };
   }
   const content = fs.readFileSync(SETTINGS_PATH, "utf-8");
   return SettingsSchema.parse(JSON.parse(content));

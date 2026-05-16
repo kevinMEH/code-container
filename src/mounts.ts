@@ -6,15 +6,15 @@ import { printInfo, promptYesNo } from "./utils";
 function getCoreMounts(): string[] {
   const home = os.homedir();
   return [
-    `${CONFIGS_DIR}/.claude:/root/.claude`,
-    `${CONFIGS_DIR}/.claude.json:/root/.claude.json`,
-    `${CONFIGS_DIR}/.codex:/root/.codex`,
-    `${CONFIGS_DIR}/.copilot:/root/.copilot`,
-    `${CONFIGS_DIR}/.opencode:/root/.config/opencode`,
-    `${CONFIGS_DIR}/.gemini:/root/.gemini`,
-    `${CONFIGS_DIR}/.local/share:/root/.local/share`,
-    `${CONFIGS_DIR}/.local/state:/root/.local/state`,
-    `${home}/.gitconfig:/root/.gitconfig:ro`,
+    `${CONFIGS_DIR}/.claude:/home/developer/.claude`,
+    `${CONFIGS_DIR}/.claude.json:/home/developer/.claude.json`,
+    `${CONFIGS_DIR}/.codex:/home/developer/.codex`,
+    `${CONFIGS_DIR}/.copilot:/home/developer/.copilot`,
+    `${CONFIGS_DIR}/.opencode:/home/developer/.config/opencode`,
+    `${CONFIGS_DIR}/.gemini:/home/developer/.gemini`,
+    `${CONFIGS_DIR}/.local/share:/home/developer/.local/share`,
+    `${CONFIGS_DIR}/.local/state:/home/developer/.local/state`,
+    `${home}/.gitconfig:/home/developer/.gitconfig:ro`,
   ];
 }
 

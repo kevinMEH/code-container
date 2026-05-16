@@ -34,8 +34,9 @@ import {
 } from "./config";
 
 export function buildImage(target: BuildTarget): void {
+  const settings = loadSettings();
   printInfo(`Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}`);
-  if (!buildImageRaw(target)) {
+  if (!buildImageRaw(target, settings.containerUid, settings.containerGid)) {
     printError("Failed to build Docker image");
     process.exit(1);
   }
