@@ -16,8 +16,10 @@ beforeEach(() => {
 describe("loadMounts", () => {
   it("returns core mounts when MOUNTS.txt does not exist", () => {
     const mounts = loadMounts();
-    expect(mounts).toContain(`${CONFIGS_DIR}/.claude:/root/.claude`);
-    expect(mounts).toContain(`${home}/.gitconfig:/root/.gitconfig:ro`);
+    expect(mounts).toContain(`${CONFIGS_DIR}/.claude:/home/developer/.claude`);
+    expect(mounts).toContain(
+      `${home}/.gitconfig:/home/developer/.gitconfig:ro`,
+    );
   });
 
   it("merges extra mounts from MOUNTS.txt", () => {
@@ -26,12 +28,12 @@ describe("loadMounts", () => {
 
     const mounts = loadMounts();
     expect(mounts).toContain("/host/path:/container/path");
-    expect(mounts).toContain(`${CONFIGS_DIR}/.claude:/root/.claude`);
+    expect(mounts).toContain(`${CONFIGS_DIR}/.claude:/home/developer/.claude`);
   });
 
   it("deduplicates mounts", () => {
     fs.mkdirSync(path.dirname(MOUNTS_PATH), { recursive: true });
-    const coreMount = `${CONFIGS_DIR}/.claude:/root/.claude`;
+    const coreMount = `${CONFIGS_DIR}/.claude:/home/developer/.claude`;
     fs.writeFileSync(MOUNTS_PATH, `${coreMount}\n`);
 
     const mounts = loadMounts();

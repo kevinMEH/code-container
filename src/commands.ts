@@ -31,11 +31,28 @@ import {
   loadSettings,
   saveSettings,
   copyConfigs,
+  HARNESS_LIST,
 } from "./config";
 
-export function buildImage(target: BuildTarget): void {
+export async function buildImage(target: BuildTarget): Promise<void> {
+  const settings = loadSettings();
+  const uid = settings.containerUid;
+  const gid = settings.containerGid;
+
+  let selectedHarnesses = settings.selectedHarnesses;
+  if (selectedHarnesses.length === 0) {
+    printInfo("No harnesses selected. Please choose which to install:");
+    selectedHarnesses = [];
+    for (const harness of HARNESS_LIST) {
+      const install = await promptYesNo(`Install ${harness}?`);
+      if (install) selectedHarnesses.push(harness);
+    }
+    settings.selectedHarnesses = selectedHarnesses;
+    saveSettings(settings);
+  }
+
   printInfo(`Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}`);
-  if (!buildImageRaw(target)) {
+  if (!buildImageRaw(target, uid, gid, selectedHarnesses)) {
     printError("Failed to build Docker image");
     process.exit(1);
   }
@@ -106,7 +123,7 @@ export async function runContainer(
 
   if (!imageExists()) {
     printWarning("Docker image not found. Building...");
-    buildImage("full");
+    await buildImage("full");
   }
 
   if (containerRunning(containerName)) {

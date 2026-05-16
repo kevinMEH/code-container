@@ -34,9 +34,16 @@ vi.mock("../src/docker", () => ({
 
 vi.mock("../src/config", () => ({
   ensureConfigDir: vi.fn(),
-  loadSettings: vi.fn(() => ({ completedInit: false, acceptedTos: false })),
+  loadSettings: vi.fn(() => ({
+    completedInit: false,
+    acceptedTos: false,
+    containerUid: 1000,
+    containerGid: 1000,
+    selectedHarnesses: [],
+  })),
   saveSettings: vi.fn(),
   copyConfigs: vi.fn(),
+  HARNESS_LIST: ["claude-code", "opencode", "codex", "gemini", "copilot"],
 }));
 
 vi.mock("../src/utils", () => ({
@@ -84,35 +91,106 @@ beforeEach(() => {
 });
 
 describe("buildImage", () => {
-  it("builds full target", () => {
-    buildImage("full");
-    expect(buildImageRaw).toHaveBeenCalledWith("full");
+  it("builds full target with stored harnesses", async () => {
+    vi.mocked(loadSettings).mockReturnValueOnce({
+      completedInit: true,
+      acceptedTos: true,
+      containerUid: 1000,
+      containerGid: 1000,
+      selectedHarnesses: ["opencode", "codex"],
+    });
+    await buildImage("full");
+    expect(buildImageRaw).toHaveBeenCalledWith("full", 1000, 1000, [
+      "opencode",
+      "codex",
+    ]);
     expect(printSuccess).toHaveBeenCalled();
   });
 
-  it("builds packages target", () => {
-    buildImage("packages");
-    expect(buildImageRaw).toHaveBeenCalledWith("packages");
+  it("prompts for harnesses when none selected", async () => {
+    vi.mocked(loadSettings).mockReturnValueOnce({
+      completedInit: true,
+      acceptedTos: true,
+      containerUid: 1000,
+      containerGid: 1000,
+      selectedHarnesses: [],
+    });
+    vi.mocked(promptYesNo)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
+    await buildImage("full");
+    expect(buildImageRaw).toHaveBeenCalledWith("full", 1000, 1000, [
+      "claude-code",
+      "opencode",
+      "gemini",
+    ]);
+    expect(saveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selectedHarnesses: ["claude-code", "opencode", "gemini"],
+      }),
+    );
   });
 
-  it("builds harness target", () => {
-    buildImage("harness");
-    expect(buildImageRaw).toHaveBeenCalledWith("harness");
+  it("builds packages target", async () => {
+    vi.mocked(loadSettings).mockReturnValueOnce({
+      completedInit: true,
+      acceptedTos: true,
+      containerUid: 1000,
+      containerGid: 1000,
+      selectedHarnesses: ["opencode"],
+    });
+    await buildImage("packages");
+    expect(buildImageRaw).toHaveBeenCalledWith("packages", 1000, 1000, [
+      "opencode",
+    ]);
   });
 
-  it("builds user target", () => {
-    buildImage("user");
-    expect(buildImageRaw).toHaveBeenCalledWith("user");
+  it("builds harness target", async () => {
+    vi.mocked(loadSettings).mockReturnValueOnce({
+      completedInit: true,
+      acceptedTos: true,
+      containerUid: 1000,
+      containerGid: 1000,
+      selectedHarnesses: ["codex"],
+    });
+    await buildImage("harness");
+    expect(buildImageRaw).toHaveBeenCalledWith("harness", 1000, 1000, [
+      "codex",
+    ]);
   });
 
-  it("calls process.exit on build failure", () => {
+  it("builds user target", async () => {
+    vi.mocked(loadSettings).mockReturnValueOnce({
+      completedInit: true,
+      acceptedTos: true,
+      containerUid: 1000,
+      containerGid: 1000,
+      selectedHarnesses: ["gemini"],
+    });
+    await buildImage("user");
+    expect(buildImageRaw).toHaveBeenCalledWith("user", 1000, 1000, ["gemini"]);
+  });
+
+  it("calls process.exit on build failure", async () => {
+    vi.mocked(loadSettings).mockReturnValueOnce({
+      completedInit: true,
+      acceptedTos: true,
+      containerUid: 1000,
+      containerGid: 1000,
+      selectedHarnesses: ["opencode"],
+    });
     const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("process.exit");
     });
     vi.mocked(buildImageRaw).mockReturnValueOnce(false);
-    expect(() => buildImage("full")).toThrow("process.exit");
+    await expect(buildImage("full")).rejects.toThrow("process.exit");
     expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(buildImageRaw).toHaveBeenCalledWith("full");
+    expect(buildImageRaw).toHaveBeenCalledWith("full", 1000, 1000, [
+      "opencode",
+    ]);
     exitSpy.mockRestore();
   });
 });
@@ -138,6 +216,8 @@ describe("init", () => {
     vi.mocked(loadSettings).mockReturnValueOnce({
       completedInit: true,
       acceptedTos: false,
+      containerUid: 1000,
+      containerGid: 1000,
     });
     await init(true);
     expect(promptYesNo).not.toHaveBeenCalled();
@@ -149,6 +229,8 @@ describe("init", () => {
     vi.mocked(loadSettings).mockReturnValueOnce({
       completedInit: false,
       acceptedTos: false,
+      containerUid: 1000,
+      containerGid: 1000,
     });
     await init(false);
     expect(copyConfigs).toHaveBeenCalled();
@@ -159,6 +241,8 @@ describe("init", () => {
     vi.mocked(loadSettings).mockReturnValueOnce({
       completedInit: true,
       acceptedTos: false,
+      containerUid: 1000,
+      containerGid: 1000,
     });
     vi.mocked(promptYesNo).mockResolvedValueOnce(true);
     await init(false);

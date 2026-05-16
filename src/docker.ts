@@ -7,6 +7,7 @@ import {
   APPDATA_DIR,
   USER_DOCKERFILE_PATH,
   PACKAGES_DOCKERFILE_PATH,
+  HARNESS_LIST,
 } from "./config";
 import { loadMounts } from "./mounts";
 import { loadFlags, FlagSource } from "./flags";
@@ -17,6 +18,8 @@ const CORE_IMAGE = "code-container-core";
 const PACKAGES_IMAGE = "code-container-packages";
 const BASE_IMAGE = "code-container-base";
 export type BuildTarget = "full" | "packages" | "harness" | "user";
+
+export const CONTAINER_USER = "developer";
 
 const RESOURCES_DIR = path.resolve(__dirname, "..", "resources");
 const CORE_DOCKERFILE = path.join(RESOURCES_DIR, "Dockerfile.Core");
@@ -66,6 +69,14 @@ const BUILD_START_INDEX: Record<BuildTarget, number> = {
   user: 3,
 };
 
+const HARNESS_BUILD_ARGS: Record<string, string> = {
+  "claude-code": "INSTALL_CLAUDE",
+  opencode: "INSTALL_OPENCODE",
+  codex: "INSTALL_CODEX",
+  gemini: "INSTALL_GEMINI",
+  copilot: "INSTALL_COPILOT",
+};
+
 const CONTAINER_PREFIX = "container";
 
 export function checkDocker(): void {
@@ -80,7 +91,7 @@ export function checkDocker(): void {
 
 export function getMounts(projectPath: string, projectName: string): string[] {
   const mounts: string[] = [];
-  mounts.push(`${projectPath}:/root/${projectName}`);
+  mounts.push(`${projectPath}:/home/${CONTAINER_USER}/${projectName}`);
   const fileMounts = loadMounts();
   mounts.push(...fileMounts);
   return mounts;
@@ -119,7 +130,12 @@ function ensureUserDockerfile(filePath: string, packagedSource: string): void {
   }
 }
 
-export function buildImageRaw(target: BuildTarget): boolean {
+export function buildImageRaw(
+  target: BuildTarget,
+  uid: number,
+  gid: number,
+  harnesses: string[],
+): boolean {
   const startIndex = BUILD_START_INDEX[target];
 
   for (let i = startIndex; i < BUILD_STAGES.length; i++) {
@@ -130,19 +146,36 @@ export function buildImageRaw(target: BuildTarget): boolean {
       ensureUserDockerfile(stage.dockerfile, stage.packagedSource);
     }
 
-    const result = spawnSync(
-      "docker",
-      [
-        "build",
-        "--no-cache",
-        "-t",
-        `${stage.tag}:${IMAGE_TAG}`,
-        "-f",
-        stage.dockerfile,
-        APPDATA_DIR,
-      ],
-      { stdio: "inherit" },
-    );
+    const dockerArgs = [
+      "build",
+      "--no-cache",
+      "-t",
+      `${stage.tag}:${IMAGE_TAG}`,
+      "-f",
+      stage.dockerfile,
+    ];
+
+    if (i === 0) {
+      dockerArgs.push("--build-arg", `CONTAINER_UID=${uid}`);
+      dockerArgs.push("--build-arg", `CONTAINER_GID=${gid}`);
+    }
+
+    if (i === 2) {
+      dockerArgs.push("--build-arg", `CONTAINER_USER=${CONTAINER_USER}`);
+      for (const harness of HARNESS_LIST) {
+        const argName = HARNESS_BUILD_ARGS[harness];
+        if (argName) {
+          dockerArgs.push(
+            "--build-arg",
+            `${argName}=${harnesses.includes(harness) ? "true" : "false"}`,
+          );
+        }
+      }
+    }
+
+    dockerArgs.push(APPDATA_DIR);
+
+    const result = spawnSync("docker", dockerArgs, { stdio: "inherit" });
     if (result.status !== 0) return false;
   }
 
@@ -188,7 +221,8 @@ export function createNewContainer(
 
   args.push("-e", "TERM=xterm-256color");
   args.push("-e", "COLORTERM=truecolor");
-  args.push("-w", `/root/${projectName}`);
+  args.push("--user", CONTAINER_USER);
+  args.push("-w", `/home/${CONTAINER_USER}/${projectName}`);
 
   for (const mount of mounts) {
     args.push("-v", mount);
@@ -206,10 +240,21 @@ export function createNewContainer(
   return result.status === 0;
 }
 
+export function getContainerUser(containerName: string): string {
+  const result = spawnSync(
+    "docker",
+    ["container", "inspect", "-f", "{{.Config.User}}", containerName],
+    { stdio: "pipe", encoding: "utf-8" },
+  );
+  return result.status === 0 ? result.stdout.trim() : "";
+}
+
 export function execInteractive(
   containerName: string,
   projectName: string,
 ): void {
+  const user = getContainerUser(containerName) || "root";
+  const homeDir = user === CONTAINER_USER ? `/home/${CONTAINER_USER}` : "/root";
   const flags = loadFlags(FlagSource.Common);
   spawnSync(
     "docker",
@@ -220,8 +265,10 @@ export function execInteractive(
       "TERM=xterm-256color",
       "-e",
       "COLORTERM=truecolor",
+      "--user",
+      user,
       "-w",
-      `/root/${projectName}`,
+      `${homeDir}/${projectName}`,
       ...flags,
       containerName,
       "/bin/bash",
@@ -247,7 +294,9 @@ export function getOtherSessionCount(
     const hasIt = line.includes("-it");
     const hasContainerName = line.includes(containerName);
     const hasBash = line.includes("/bin/bash");
-    const hasWorkdir = line.includes(`-w /root/${projectName}`);
+    const hasWorkdir =
+      line.includes(`-w /home/${CONTAINER_USER}/${projectName}`) ||
+      line.includes(`-w /root/${projectName}`);
 
     if (hasDockerExec && hasIt && hasContainerName && hasBash && hasWorkdir) {
       count++;

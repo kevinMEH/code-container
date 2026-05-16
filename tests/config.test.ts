@@ -21,19 +21,43 @@ beforeEach(() => {
 
 describe("loadSettings", () => {
   it("returns defaults when file does not exist", () => {
-    expect(loadSettings()).toEqual({
-      completedInit: false,
-      acceptedTos: false,
-    });
+    const settings = loadSettings();
+    expect(settings.completedInit).toBe(false);
+    expect(settings.acceptedTos).toBe(false);
+    expect(settings.containerUid).toBe(1000);
+    expect(settings.containerGid).toBe(1000);
+    expect(settings.selectedHarnesses).toEqual([]);
   });
 
   it("returns parsed settings from valid JSON", () => {
     fs.mkdirSync(APPDATA_DIR, { recursive: true });
     fs.writeFileSync(
       SETTINGS_PATH,
-      JSON.stringify({ completedInit: true, acceptedTos: true }),
+      JSON.stringify({
+        completedInit: true,
+        acceptedTos: true,
+        containerUid: 1001,
+        containerGid: 1002,
+        selectedHarnesses: ["opencode", "codex"],
+      }),
     );
-    expect(loadSettings()).toEqual({ completedInit: true, acceptedTos: true });
+    expect(loadSettings()).toEqual({
+      completedInit: true,
+      acceptedTos: true,
+      containerUid: 1001,
+      containerGid: 1002,
+      selectedHarnesses: ["opencode", "codex"],
+    });
+  });
+
+  it("applies defaults for missing UID/GID fields", () => {
+    fs.mkdirSync(APPDATA_DIR, { recursive: true });
+    fs.writeFileSync(SETTINGS_PATH, JSON.stringify({ completedInit: true }));
+    const settings = loadSettings();
+    expect(settings.completedInit).toBe(true);
+    expect(settings.containerUid).toBe(1000);
+    expect(settings.containerGid).toBe(1000);
+    expect(settings.selectedHarnesses).toEqual([]);
   });
 
   it("throws on invalid JSON", () => {
@@ -54,11 +78,20 @@ describe("loadSettings", () => {
 
 describe("saveSettings", () => {
   it("writes settings as JSON and creates appdata dir", () => {
-    saveSettings({ completedInit: true, acceptedTos: false });
+    saveSettings({
+      completedInit: true,
+      acceptedTos: false,
+      containerUid: 1000,
+      containerGid: 1000,
+      selectedHarnesses: ["opencode"],
+    });
     const content = fs.readFileSync(SETTINGS_PATH, "utf-8") as string;
     expect(JSON.parse(content)).toEqual({
       completedInit: true,
       acceptedTos: false,
+      containerUid: 1000,
+      containerGid: 1000,
+      selectedHarnesses: ["opencode"],
     });
     expect(fs.existsSync(APPDATA_DIR)).toBe(true);
   });

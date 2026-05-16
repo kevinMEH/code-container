@@ -13,6 +13,7 @@ import {
   generateContainerName,
   getStoppedContainerIds,
   buildImageRaw,
+  getContainerUser,
 } from "../src/docker";
 
 vi.mock("fs");
@@ -107,6 +108,23 @@ describe("containerRunning", () => {
   });
 });
 
+describe("getContainerUser", () => {
+  it("returns empty string when container not found", () => {
+    enqueue({ status: 1, stdout: "", stderr: "" });
+    expect(getContainerUser("container-foo-abc12345")).toBe("");
+  });
+
+  it("returns configured user for container", () => {
+    enqueue({ status: 0, stdout: "developer\n", stderr: "" });
+    expect(getContainerUser("container-foo-abc12345")).toBe("developer");
+  });
+
+  it("returns empty string for root (old containers)", () => {
+    enqueue({ status: 0, stdout: "\n", stderr: "" });
+    expect(getContainerUser("container-foo-abc12345")).toBe("");
+  });
+});
+
 describe("getOtherSessionCount", () => {
   it("returns 0 when ps fails", () => {
     enqueue({ status: 1, stdout: "", stderr: "" });
@@ -117,19 +135,29 @@ describe("getOtherSessionCount", () => {
     enqueue({
       status: 0,
       stdout:
-        "docker exec -it -w /root/foo container-foo-abc12345 /bin/bash\n" +
-        "docker exec -it -w /root/foo container-foo-abc12345 /bin/bash\n" +
+        "docker exec -it --user developer -w /home/developer/foo container-foo-abc12345 /bin/bash\n" +
+        "docker exec -it --user developer -w /home/developer/foo container-foo-abc12345 /bin/bash\n" +
         "some other process\n",
       stderr: "",
     });
     expect(getOtherSessionCount("container-foo-abc12345", "foo")).toBe(2);
   });
 
+  it("counts old container sessions with /root/ workdir", () => {
+    enqueue({
+      status: 0,
+      stdout:
+        "docker exec -it --user root -w /root/foo container-foo-abc12345 /bin/bash\n",
+      stderr: "",
+    });
+    expect(getOtherSessionCount("container-foo-abc12345", "foo")).toBe(1);
+  });
+
   it("does not count non-matching sessions", () => {
     enqueue({
       status: 0,
       stdout:
-        "docker exec -it -w /root/bar container-bar-xyz /bin/bash\n" +
+        "docker exec -it --user developer -w /home/developer/bar container-bar-xyz /bin/bash\n" +
         "ps ax -o command=\n",
       stderr: "",
     });
@@ -150,7 +178,8 @@ describe("stopContainerIfLastSession", () => {
   it("skips stop when other sessions exist", () => {
     enqueue({
       status: 0,
-      stdout: "docker exec -it -w /root/foo container-foo-abc12345 /bin/bash\n",
+      stdout:
+        "docker exec -it --user developer -w /home/developer/foo container-foo-abc12345 /bin/bash\n",
       stderr: "",
     });
     stopContainerIfLastSession("container-foo-abc12345", "foo");
@@ -174,10 +203,12 @@ describe("createNewContainer", () => {
     expect(runCall.args).toContain("container-foo-abc12345");
     expect(runCall.args).toContain("-e");
     expect(runCall.args).toContain("TERM=xterm-256color");
+    expect(runCall.args).toContain("--user");
+    expect(runCall.args).toContain("developer");
     expect(runCall.args).toContain("-w");
-    expect(runCall.args).toContain("/root/foo");
+    expect(runCall.args).toContain("/home/developer/foo");
     expect(runCall.args).toContain("-v");
-    expect(runCall.args).toContain("/home/user/foo:/root/foo");
+    expect(runCall.args).toContain("/home/user/foo:/home/developer/foo");
     expect(runCall.args![runCall.args!.length - 3]).toBe(
       "code-container:latest",
     );
@@ -328,7 +359,7 @@ describe("buildImageRaw", () => {
     it("builds all 4 stages", () => {
       seedAllDockerfiles();
       enqueueSuccessfulBuilds(4);
-      const result = buildImageRaw("full");
+      const result = buildImageRaw("full", 1000, 1001, []);
       expect(result).toBe(true);
 
       const builds = getBuildCalls();
@@ -338,7 +369,7 @@ describe("buildImageRaw", () => {
     it("passes --no-cache to every stage", () => {
       seedAllDockerfiles();
       enqueueSuccessfulBuilds(4);
-      buildImageRaw("full");
+      buildImageRaw("full", 1000, 1001, []);
 
       const builds = getBuildCalls();
       for (const build of builds) {
@@ -349,7 +380,7 @@ describe("buildImageRaw", () => {
     it("uses correct dockerfile and tag for each stage", () => {
       seedAllDockerfiles();
       enqueueSuccessfulBuilds(4);
-      buildImageRaw("full");
+      buildImageRaw("full", 1000, 1001, []);
 
       const builds = getBuildCalls();
       expect(builds[0].dockerfile).toBe(coreDockerfile);
@@ -365,10 +396,73 @@ describe("buildImageRaw", () => {
       expect(builds[3].tag).toBe("code-container:latest");
     });
 
+    it("passes UID/GID build args to core stage (index 0)", () => {
+      seedAllDockerfiles();
+      enqueueSuccessfulBuilds(4);
+      buildImageRaw("full", 1000, 1001, []);
+
+      const builds = getBuildCalls();
+      const coreArgs = builds[0].args;
+      expect(coreArgs).toContain("--build-arg");
+      expect(coreArgs).toContain("CONTAINER_UID=1000");
+      expect(coreArgs).toContain("CONTAINER_GID=1001");
+    });
+
+    it("does not pass UID/GID args to non-core stages", () => {
+      seedAllDockerfiles();
+      enqueueSuccessfulBuilds(4);
+      buildImageRaw("full", 1000, 1001, []);
+
+      const builds = getBuildCalls();
+      for (let i = 1; i < builds.length; i++) {
+        expect(builds[i].args).not.toContain("CONTAINER_UID");
+        expect(builds[i].args).not.toContain("CONTAINER_GID");
+      }
+    });
+
+    it("passes harness build args to harness stage (index 2)", () => {
+      seedAllDockerfiles();
+      enqueueSuccessfulBuilds(4);
+      buildImageRaw("full", 1000, 1001, ["opencode", "gemini"]);
+
+      const builds = getBuildCalls();
+      const harnessArgs = builds[2].args;
+      expect(harnessArgs).toContain("--build-arg");
+      expect(harnessArgs).toContain("INSTALL_CLAUDE=false");
+      expect(harnessArgs).toContain("INSTALL_OPENCODE=true");
+      expect(harnessArgs).toContain("INSTALL_CODEX=false");
+      expect(harnessArgs).toContain("INSTALL_GEMINI=true");
+      expect(harnessArgs).toContain("INSTALL_COPILOT=false");
+    });
+
+    it("passes CONTAINER_USER to harness stage", () => {
+      seedAllDockerfiles();
+      enqueueSuccessfulBuilds(4);
+      buildImageRaw("full", 1000, 1001, []);
+
+      const builds = getBuildCalls();
+      const harnessArgs = builds[2].args;
+      expect(harnessArgs).toContain("--build-arg");
+      expect(harnessArgs).toContain("CONTAINER_USER=developer");
+    });
+
+    it("does not pass harness args to non-harness stages", () => {
+      seedAllDockerfiles();
+      enqueueSuccessfulBuilds(4);
+      buildImageRaw("full", 1000, 1001, ["opencode"]);
+
+      const builds = getBuildCalls();
+      for (let i = 0; i < builds.length; i++) {
+        if (i === 2) continue;
+        expect(builds[i].args).not.toContain("INSTALL_CLAUDE");
+        expect(builds[i].args).not.toContain("INSTALL_OPENCODE");
+      }
+    });
+
     it("uses APPDATA_DIR as build context for every stage", () => {
       seedAllDockerfiles();
       enqueueSuccessfulBuilds(4);
-      buildImageRaw("full");
+      buildImageRaw("full", 1000, 1001, []);
 
       const builds = getBuildCalls();
       for (const build of builds) {
@@ -381,7 +475,7 @@ describe("buildImageRaw", () => {
     it("builds 3 stages (packages, harness, user)", () => {
       seedAllDockerfiles();
       enqueueSuccessfulBuilds(3);
-      const result = buildImageRaw("packages");
+      const result = buildImageRaw("packages", 1000, 1001, []);
       expect(result).toBe(true);
 
       const builds = getBuildCalls();
@@ -394,7 +488,7 @@ describe("buildImageRaw", () => {
     it("does not build core stage", () => {
       seedAllDockerfiles();
       enqueueSuccessfulBuilds(3);
-      buildImageRaw("packages");
+      buildImageRaw("packages", 1000, 1001, []);
 
       const builds = getBuildCalls();
       const coreBuild = builds.find((b) => b.dockerfile === coreDockerfile);
@@ -406,7 +500,7 @@ describe("buildImageRaw", () => {
     it("builds 2 stages (harness, user)", () => {
       seedAllDockerfiles();
       enqueueSuccessfulBuilds(2);
-      const result = buildImageRaw("harness");
+      const result = buildImageRaw("harness", 1000, 1001, []);
       expect(result).toBe(true);
 
       const builds = getBuildCalls();
@@ -418,7 +512,7 @@ describe("buildImageRaw", () => {
     it("does not build core or packages stages", () => {
       seedAllDockerfiles();
       enqueueSuccessfulBuilds(2);
-      buildImageRaw("harness");
+      buildImageRaw("harness", 1000, 1001, []);
 
       const builds = getBuildCalls();
       const coreBuild = builds.find((b) => b.dockerfile === coreDockerfile);
@@ -434,7 +528,7 @@ describe("buildImageRaw", () => {
     it("builds only the user stage", () => {
       seedAllDockerfiles();
       enqueue({ status: 0, stdout: "", stderr: "" });
-      const result = buildImageRaw("user");
+      const result = buildImageRaw("user", 1000, 1001, []);
       expect(result).toBe(true);
 
       const builds = getBuildCalls();
@@ -448,7 +542,7 @@ describe("buildImageRaw", () => {
     it("returns false when core stage fails", () => {
       seedAllDockerfiles();
       enqueue({ status: 1, stdout: "", stderr: "" });
-      expect(buildImageRaw("full")).toBe(false);
+      expect(buildImageRaw("full", 1000, 1001, [])).toBe(false);
       expect(getBuildCalls()).toHaveLength(1);
     });
 
@@ -456,7 +550,7 @@ describe("buildImageRaw", () => {
       seedAllDockerfiles();
       enqueueSuccessfulBuilds(1);
       enqueue({ status: 1, stdout: "", stderr: "" });
-      expect(buildImageRaw("full")).toBe(false);
+      expect(buildImageRaw("full", 1000, 1001, [])).toBe(false);
       expect(getBuildCalls()).toHaveLength(2);
     });
 
@@ -464,7 +558,7 @@ describe("buildImageRaw", () => {
       seedAllDockerfiles();
       enqueueSuccessfulBuilds(2);
       enqueue({ status: 1, stdout: "", stderr: "" });
-      expect(buildImageRaw("full")).toBe(false);
+      expect(buildImageRaw("full", 1000, 1001, [])).toBe(false);
       expect(getBuildCalls()).toHaveLength(3);
     });
 
@@ -472,35 +566,35 @@ describe("buildImageRaw", () => {
       seedAllDockerfiles();
       enqueueSuccessfulBuilds(3);
       enqueue({ status: 1, stdout: "", stderr: "" });
-      expect(buildImageRaw("full")).toBe(false);
+      expect(buildImageRaw("full", 1000, 1001, [])).toBe(false);
       expect(getBuildCalls()).toHaveLength(4);
     });
 
     it("does not continue building after a failure", () => {
       seedAllDockerfiles();
       enqueue({ status: 1, stdout: "", stderr: "" });
-      buildImageRaw("full");
+      buildImageRaw("full", 1000, 1001, []);
       expect(getBuildCalls()).toHaveLength(1);
     });
 
     it("packages target fails at first stage", () => {
       seedAllDockerfiles();
       enqueue({ status: 1, stdout: "", stderr: "" });
-      expect(buildImageRaw("packages")).toBe(false);
+      expect(buildImageRaw("packages", 1000, 1001, [])).toBe(false);
       expect(getBuildCalls()).toHaveLength(1);
     });
 
     it("harness target fails at first stage", () => {
       seedAllDockerfiles();
       enqueue({ status: 1, stdout: "", stderr: "" });
-      expect(buildImageRaw("harness")).toBe(false);
+      expect(buildImageRaw("harness", 1000, 1001, [])).toBe(false);
       expect(getBuildCalls()).toHaveLength(1);
     });
 
     it("user target fails", () => {
       seedAllDockerfiles();
       enqueue({ status: 1, stdout: "", stderr: "" });
-      expect(buildImageRaw("user")).toBe(false);
+      expect(buildImageRaw("user", 1000, 1001, [])).toBe(false);
     });
   });
 
@@ -513,7 +607,7 @@ describe("buildImageRaw", () => {
       });
       enqueueSuccessfulBuilds(1);
 
-      buildImageRaw("packages");
+      buildImageRaw("packages", 1000, 1001, []);
 
       expect(
         // @ts-expect-error memfs runtime has existsSync but types don't expose it
@@ -531,7 +625,7 @@ describe("buildImageRaw", () => {
       });
       enqueueSuccessfulBuilds(1);
 
-      buildImageRaw("user");
+      buildImageRaw("user", 1000, 1001, []);
 
       expect(
         // @ts-expect-error memfs runtime has existsSync but types don't expose it
@@ -542,7 +636,9 @@ describe("buildImageRaw", () => {
     });
 
     it("throws when user dockerfile and packaged source both missing", () => {
-      expect(() => buildImageRaw("user")).toThrow("Dockerfile not found");
+      expect(() => buildImageRaw("user", 1000, 1001, [])).toThrow(
+        "Dockerfile not found",
+      );
     });
 
     it("does not copy when user dockerfile already exists", () => {
@@ -555,7 +651,7 @@ describe("buildImageRaw", () => {
         path.join(os.homedir(), ".code-container", "Dockerfile.User"),
         "utf-8",
       );
-      buildImageRaw("user");
+      buildImageRaw("user", 1000, 1001, []);
       // @ts-expect-error memfs runtime has readFileSync but types don't expose it
       const contentAfter = fs.readFileSync(
         path.join(os.homedir(), ".code-container", "Dockerfile.User"),

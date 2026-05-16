@@ -82,7 +82,7 @@ async function main(): Promise<void> {
       cleanContainers();
       return;
     case "build":
-      buildImage(parsed.target);
+      await buildImage(parsed.target);
       return;
     case "stop": {
       const resolved = resolveProjectPath(parsed.projectPath);
